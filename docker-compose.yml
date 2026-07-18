@@ -1,0 +1,275 @@
+version: '3.9'
+
+# ─── TridopAI local dev stack ────────────────────────────────────────────────
+# One command to start the entire mesh: docker compose up
+# Infra services (postgres, mongodb, redis) start first via depends_on.
+# App services are added here as each phase is completed.
+
+x-common-env: &common-env
+  NODE_ENV: development
+  REDIS_URL: redis://redis:6379
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318/v1/traces
+
+services:
+  # ─── Infrastructure ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tridopai
+      POSTGRES_PASSWORD: tridopai
+      POSTGRES_DB: tridopai
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tridopai']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ─── Phase 3: identity-service + api-gateway ────────────────────────────────
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: apps/identity-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongodb:  { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/identity-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3001:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      identity-service: { condition: service_healthy }
+      redis:            { condition: service_healthy }
+    env_file: apps/api-gateway/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '4000:4000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:4000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # ─── Remaining Microservices ────────────────────────────────────────────────
+
+  sites-service:
+    build:
+      context: .
+      dockerfile: apps/sites-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongodb:  { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/sites-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3002:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: apps/ai-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongodb:  { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/ai-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3003:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  deploy-service:
+    build:
+      context: .
+      dockerfile: apps/deploy-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/deploy-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3004:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  domains-service:
+    build:
+      context: .
+      dockerfile: apps/domains-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/domains-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3005:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  commerce-service:
+    build:
+      context: .
+      dockerfile: apps/commerce-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/commerce-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3006:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  billing-service:
+    build:
+      context: .
+      dockerfile: apps/billing-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/billing-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3007:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  engagement-service:
+    build:
+      context: .
+      dockerfile: apps/engagement-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongodb:  { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/engagement-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3008:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: apps/analytics-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:    { condition: service_healthy }
+    env_file: apps/analytics-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3009:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  owner-service:
+    build:
+      context: .
+      dockerfile: apps/owner-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    env_file: apps/owner-service/.env
+    environment:
+      <<: *common-env
+    ports:
+      - '3010:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
