@@ -1,0 +1,7 @@
+name = "site-router"
+main = "src/index.ts"
+compatibility_date = "2024-02-08"
+
+kv_namespaces = [
+  { binding = "TRAFFIC_COUNTERS", id = "<YOUR_KV_NAMESPACE_ID>" }
+]
