@@ -10,4 +10,7 @@ export const ANALYTICS_CLIENT = 'ANALYTICS_SERVICE';
 @Injectable()
 export class AnalyticsClient extends BaseServiceClient {
   constructor(@InjectClient(ANALYTICS_CLIENT) protected readonly proxy: ClientProxy) { super(); }
+  getDashboard(data: { siteId: string }): Promise<any> {
+    return this.send('analytics.dashboard.get', data);
+  }
 }

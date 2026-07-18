@@ -13,7 +13,16 @@ export class DomainsClient extends BaseServiceClient {
   updateLookup(payload: Record<string, unknown>): Promise<never> {
     return this.send('domains.lookup.update', payload);
   }
-  provisionSubdomain(payload: Record<string, unknown>): Promise<never> {
+  provisionSubdomain(payload: Record<string, unknown>): Promise<any> {
     return this.send('domains.subdomain.provision', payload);
+  }
+  search(query: string): Promise<any> {
+    return this.send('domains.search', { query });
+  }
+  register(payload: Record<string, unknown>): Promise<any> {
+    return this.send('domains.register', payload);
+  }
+  listDomains(payload: { siteId: string }): Promise<any> {
+    return this.send('domains.list', payload);
   }
 }
