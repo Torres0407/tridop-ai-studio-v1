@@ -76,4 +76,8 @@ export class IdentityClient extends BaseServiceClient {
   upsertBusinessProfile(payload: UpsertBusinessProfilePayload): Promise<BusinessProfile> {
     return this.send('businessProfile.upsert', payload);
   }
+
+  listUsers(payload: { limit?: number; offset?: number }): Promise<any> {
+    return this.send('users.list', payload);
+  }
 }

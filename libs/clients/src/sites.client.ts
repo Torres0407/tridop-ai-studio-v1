@@ -82,4 +82,7 @@ export class SitesClient extends BaseServiceClient {
   uploadImage(data: { siteId: string, fileData: string }): Promise<any> {
     return this.send('uploads.image', data);
   }
+  listAllSites(data: { limit?: number; offset?: number }): Promise<any> {
+    return this.send('sites.listAll', data);
+  }
 }

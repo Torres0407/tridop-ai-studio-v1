@@ -14,3 +14,5 @@ export * from './idempotency/idempotency.service';
 export * from './idempotency/idempotency.module';
 export * from './database/tenant.repository';
 export * from './guards/site-ownership.guard';
+export * from './decorators/roles.decorator';
+export * from './guards/roles.guard';

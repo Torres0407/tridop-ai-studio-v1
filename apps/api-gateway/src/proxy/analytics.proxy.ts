@@ -16,6 +16,6 @@ export class AnalyticsProxy {
   @Get('dashboard/site/:siteId')
   @ApiOperation({ summary: 'Get analytics dashboard for a site' })
   async getDashboard(@Param('siteId') siteId: string) {
-    return this.analyticsClient.send('analytics.dashboard.get', { siteId });
+    return this.analyticsClient.getDashboard({ siteId });
   }
 }

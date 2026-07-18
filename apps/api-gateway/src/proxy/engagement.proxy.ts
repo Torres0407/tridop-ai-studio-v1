@@ -16,18 +16,18 @@ export class EngagementProxy {
   @Get('contacts/site/:siteId')
   @ApiOperation({ summary: 'List contacts for a site' })
   async listContacts(@Param('siteId') siteId: string) {
-    return this.engagementClient.send('engagement.contacts.list', { siteId });
+    return this.engagementClient.listContacts({ siteId });
   }
 
   @Get('forms/site/:siteId')
   @ApiOperation({ summary: 'List form submissions for a site' })
   async listForms(@Param('siteId') siteId: string) {
-    return this.engagementClient.send('engagement.forms.list', { siteId });
+    return this.engagementClient.listForms({ siteId });
   }
 
   @Post('messages')
   @ApiOperation({ summary: 'Send a campaign message' })
   async sendCampaignMessage(@Body() data: { siteId: string; contactId: string; channel: string; message: string; to: string }) {
-    return this.engagementClient.send('engagement.messages.send', data);
+    return this.engagementClient.sendCampaignMessage(data);
   }
 }
