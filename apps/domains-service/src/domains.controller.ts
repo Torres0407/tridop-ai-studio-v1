@@ -1,5 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { ConfigService } from '@nestjs/config';
 import { ProvisionSubdomain } from './subdomain/provisionSubdomain';
 import { CloudflareForSaaS } from './cloudflareForSaaS';
 import { IdempotencyService } from '@libs/common';
@@ -10,6 +11,7 @@ export class DomainsController {
     private provisionSubdomain: ProvisionSubdomain,
     private cloudflare: CloudflareForSaaS,
     private idempotency: IdempotencyService,
+    private config: ConfigService,
   ) {}
 
   @MessagePattern('domains.subdomain.provision')

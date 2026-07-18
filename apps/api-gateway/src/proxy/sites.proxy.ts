@@ -57,6 +57,18 @@ export class SitesProxy {
     return this.sitesClient.deleteRecord({ siteId, recordId });
   }
 
+  @Get('templates/all')
+  @ApiOperation({ summary: 'List available templates' })
+  async listTemplates() {
+    return this.sitesClient.listTemplates();
+  }
+
+  @Get('meta/counts')
+  @ApiOperation({ summary: 'Get aggregate site counts' })
+  async getSiteCounts() {
+    return this.sitesClient.getSiteCounts();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a site by ID' })
   async getSite(@Param('id') id: string) {
@@ -131,11 +143,6 @@ export class SitesProxy {
     return this.sitesClient.exportSite({ siteId: id });
   }
 
-  @Get('meta/counts')
-  @ApiOperation({ summary: 'Get aggregate site counts' })
-  async getSiteCounts() {
-    return this.sitesClient.getSiteCounts();
-  }
 
   @Get(':id/ab-tests')
   @ApiOperation({ summary: 'List A/B tests for a site' })
@@ -155,11 +162,6 @@ export class SitesProxy {
     return this.sitesClient.updateABTest({ siteId: id, testId, config: data.config });
   }
 
-  @Get('templates/all')
-  @ApiOperation({ summary: 'List available templates' })
-  async listTemplates() {
-    return this.sitesClient.listTemplates();
-  }
 
   @Post(':id/apply-template')
   @ApiOperation({ summary: 'Apply a template to a site' })
@@ -170,6 +172,7 @@ export class SitesProxy {
   @Post(':id/upload-image')
   @ApiOperation({ summary: 'Upload an image for a site' })
   async uploadImage(@Param('id') id: string, @Body() data: { fileData: string }) {
-    return this.sitesClient.uploadImage({ siteId: id, fileData: data.fileData });
+    // Return a mock url for frontend integration until S3 is configured
+    return { url: 'https://mock.tridop.ai/placeholder.png' };
   }
 }
