@@ -1,0 +1,21 @@
+{
+  "name": "@libs/frontend-client",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/frontend-client/src",
+  "projectType": "library",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --project libs/frontend-client/tsconfig.lib.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/frontend-client/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:shared", "type:lib"]
+}

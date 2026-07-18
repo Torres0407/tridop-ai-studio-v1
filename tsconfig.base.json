@@ -21,7 +21,9 @@
       "@libs/common": ["libs/common/src/index.ts"],
       "@libs/common/*": ["libs/common/src/*"],
       "@libs/types": ["libs/types/src/index.ts"],
-      "@libs/types/*": ["libs/types/src/*"]
+      "@libs/types/*": ["libs/types/src/*"],
+      "@libs/frontend-client": ["libs/frontend-client/src/index.ts"],
+      "@libs/frontend-client/*": ["libs/frontend-client/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp"]
