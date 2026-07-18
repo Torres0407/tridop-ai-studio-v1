@@ -16,4 +16,13 @@ export class EngagementClient extends BaseServiceClient {
   sendNotification(payload: Record<string, unknown>): Promise<never> {
     return this.send('notifications.send', payload);
   }
+  listContacts(payload: { siteId: string }): Promise<any> {
+    return this.send('engagement.contacts.list', payload);
+  }
+  listForms(payload: { siteId: string }): Promise<any> {
+    return this.send('engagement.forms.list', payload);
+  }
+  sendCampaignMessage(payload: { siteId: string; contactId: string; channel: string; message: string; to: string }): Promise<any> {
+    return this.send('engagement.messages.send', payload);
+  }
 }

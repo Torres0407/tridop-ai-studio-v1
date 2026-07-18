@@ -10,4 +10,10 @@ export const OWNER_CLIENT = 'OWNER_SERVICE';
 @Injectable()
 export class OwnerClient extends BaseServiceClient {
   constructor(@InjectClient(OWNER_CLIENT) protected readonly proxy: ClientProxy) { super(); }
+  getDashboardStats(): Promise<any> {
+    return this.send('owner.dashboard.get', {});
+  }
+  setKillSwitch(payload: { active: boolean }): Promise<any> {
+    return this.send('owner.platform.killSwitch.set', payload);
+  }
 }
