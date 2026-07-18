@@ -1,0 +1,39 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Integration Tests (full mesh)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start docker-compose stack
+        run: docker compose up -d --wait
+        timeout-minutes: 5
+
+      - name: Run integration tests
+        run: npx nx run-many --target=test:e2e --all --parallel=1
+        env:
+          NODE_ENV: test
+          REDIS_URL: redis://localhost:6379
+          # Each service uses its own DATABASE_URL / MONGODB_URI from
+          # docker-compose environment — see docker-compose.yml
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
