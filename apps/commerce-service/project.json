@@ -1,0 +1,34 @@
+{
+  "name": "commerce-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/commerce-service/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/apps/commerce-service",
+        "main": "apps/commerce-service/src/main.ts",
+        "tsConfig": "apps/commerce-service/tsconfig.app.json",
+        "assets": []
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --project apps/commerce-service/tsconfig.app.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "apps/commerce-service/**/*.ts"
+        ]
+      }
+    }
+  },
+  "tags": [
+    "type:service"
+  ]
+}
