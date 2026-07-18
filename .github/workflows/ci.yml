@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  ci:
+    name: Lint · Typecheck · Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Nx needs full history to compute affected graph
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set Nx SHAs (for affected computation)
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Lint (all)
+        run: npx nx run-many --target=lint --all --parallel=3
+
+      - name: Typecheck (affected only)
+        run: npx nx affected --target=typecheck --parallel=3
+
+      - name: Unit tests (affected only)
+        run: npx nx affected --target=test --parallel=3 --ci --coverage
+        env:
+          NODE_ENV: test
