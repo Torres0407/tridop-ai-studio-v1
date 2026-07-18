@@ -1,0 +1,34 @@
+{
+  "name": "ai-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/ai-service/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/apps/ai-service",
+        "main": "apps/ai-service/src/main.ts",
+        "tsConfig": "apps/ai-service/tsconfig.app.json",
+        "assets": []
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --project apps/ai-service/tsconfig.app.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "apps/ai-service/**/*.ts"
+        ]
+      }
+    }
+  },
+  "tags": [
+    "type:service"
+  ]
+}
