@@ -1,0 +1,34 @@
+{
+  "name": "domains-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/domains-service/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/apps/domains-service",
+        "main": "apps/domains-service/src/main.ts",
+        "tsConfig": "apps/domains-service/tsconfig.app.json",
+        "assets": []
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --project apps/domains-service/tsconfig.app.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "apps/domains-service/**/*.ts"
+        ]
+      }
+    }
+  },
+  "tags": [
+    "type:service"
+  ]
+}
