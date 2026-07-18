@@ -1,0 +1,34 @@
+{
+  "name": "deploy-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/deploy-service/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/apps/deploy-service",
+        "main": "apps/deploy-service/src/main.ts",
+        "tsConfig": "apps/deploy-service/tsconfig.app.json",
+        "assets": []
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --project apps/deploy-service/tsconfig.app.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "apps/deploy-service/**/*.ts"
+        ]
+      }
+    }
+  },
+  "tags": [
+    "type:service"
+  ]
+}
