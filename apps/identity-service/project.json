@@ -1,0 +1,36 @@
+{
+  "name": "identity-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/identity-service/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/apps/identity-service",
+        "main": "apps/identity-service/src/main.ts",
+        "tsConfig": "apps/identity-service/tsconfig.app.json",
+        "assets": ["apps/identity-service/src/assets"]
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --project apps/identity-service/tsconfig.app.json --noEmit"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "apps/identity-service/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/identity-service/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:identity", "type:service"]
+}
