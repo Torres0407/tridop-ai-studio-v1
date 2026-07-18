@@ -5,7 +5,8 @@
     "outDir": "../../dist/apps/api-gateway",
     "declaration": false,
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "rootDir": "../../"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["**/*.spec.ts", "**/*.test.ts"]

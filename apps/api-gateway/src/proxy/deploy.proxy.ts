@@ -13,12 +13,12 @@ export class DeployProxy {
   @Post('trigger')
   @ApiOperation({ summary: 'Trigger a deployment' })
   async triggerDeployment(@Body() data: { siteId: string, versionId?: string }) {
-    return this.deployClient.triggerDeployment(data);
+    return this.deployClient.triggerDeploy(data);
   }
 
-  @Get('status/:siteId')
+  @Get('status/:jobId')
   @ApiOperation({ summary: 'Get deployment status' })
-  async getStatus(@Param('siteId') siteId: string) {
-    return this.deployClient.getDeploymentStatus({ siteId });
+  async getStatus(@Param('jobId') jobId: string) {
+    return this.deployClient.getStatus(jobId);
   }
 }
