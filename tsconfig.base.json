@@ -1,0 +1,28 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2021",
+    "module": "commonjs",
+    "lib": ["ES2021"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@libs/clients": ["libs/clients/src/index.ts"],
+      "@libs/clients/*": ["libs/clients/src/*"],
+      "@libs/common": ["libs/common/src/index.ts"],
+      "@libs/common/*": ["libs/common/src/*"],
+      "@libs/types": ["libs/types/src/index.ts"],
+      "@libs/types/*": ["libs/types/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

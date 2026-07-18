@@ -1,0 +1,43 @@
+version: 2
+updates:
+  # npm workspaces — check all packages in monorepo
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    groups:
+      # Group all NestJS packages together so one PR covers the upgrade
+      nestjs:
+        patterns:
+          - "@nestjs/*"
+      # Group all OpenTelemetry packages
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
+      # Group all TypeORM / Mongoose / database
+      database:
+        patterns:
+          - "typeorm"
+          - "mongoose"
+          - "pg"
+          - "ioredis"
+          - "bullmq"
+
+  # Dockerfile base images
+  - package-ecosystem: "docker"
+    directory: "/apps/api-gateway"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/identity-service"
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actions versions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
