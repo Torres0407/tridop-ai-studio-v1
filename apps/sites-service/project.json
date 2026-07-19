@@ -5,8 +5,11 @@
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
       "options": {
+        "target": "node",
+        "compiler": "tsc",
         "outputPath": "dist/apps/sites-service",
         "main": "apps/sites-service/src/main.ts",
         "tsConfig": "apps/sites-service/tsconfig.app.json",
