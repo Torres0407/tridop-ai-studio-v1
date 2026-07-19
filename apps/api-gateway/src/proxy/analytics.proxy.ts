@@ -18,4 +18,22 @@ export class AnalyticsProxy {
   async getDashboard(@Param('siteId') siteId: string) {
     return this.analyticsClient.getDashboard({ siteId });
   }
+
+  @Get('summary/site/:siteId')
+  @ApiOperation({ summary: 'Get summary for a site' })
+  async getSummary(@Param('siteId') siteId: string) {
+    return this.analyticsClient.getSummary({ siteId });
+  }
+
+  @Post('events/site/:siteId')
+  @ApiOperation({ summary: 'Track an event for a site' })
+  async trackEvent(@Param('siteId') siteId: string, @Body() data: { event: string; properties?: any }) {
+    return this.analyticsClient.trackEvent({ siteId, ...data });
+  }
+
+  @Get('funnel/site/:siteId')
+  @ApiOperation({ summary: 'Get funnel for a site' })
+  async getFunnel(@Param('siteId') siteId: string) {
+    return this.analyticsClient.getFunnel({ siteId });
+  }
 }
