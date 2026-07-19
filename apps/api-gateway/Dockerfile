@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.base.json ./
 COPY nx.json ./
+COPY webpack.config.js ./
 
 COPY libs/common  ./libs/common
 COPY libs/types   ./libs/types
