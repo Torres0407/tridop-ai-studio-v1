@@ -65,7 +65,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-unicorn": "^51.0.0",
+    "eslint-plugin-unicorn": "^72.0.0",
     "jest": "^30.4.2",
     "lucide-react": "^1.25.0",
     "motion": "^12.42.2",
