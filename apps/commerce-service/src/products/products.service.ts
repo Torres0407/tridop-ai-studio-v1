@@ -23,7 +23,7 @@ export class ProductsService {
     return this.repo.findOne({ where: { id } });
   }
 
-  async update(id: string, data: Partial<ProductEntity>): Promise<ProductEntity> {
+  async update(id: string, data: Partial<ProductEntity>): Promise<ProductEntity | null> {
     await this.repo.update({ id }, data);
     return this.findById(id);
   }
