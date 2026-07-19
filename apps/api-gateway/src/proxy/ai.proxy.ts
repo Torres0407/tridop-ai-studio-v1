@@ -23,8 +23,8 @@ export class AiProxy {
   @Post('generate')
   @ApiOperation({ summary: 'Generate site blocks based on a prompt and context' })
   async generate(@Req() req: Request & { user: JwtPayload }, @Body() dto: { siteId: string; prompt: string }) {
-    // Deduct AI credits synchronously via billing-service
-    const result = await this.billingClient.send('billing.credits.deduct', { userId: req.user.sub, amount: 1 });
+    // Deduct AI credits via public wrapper
+    const result = await this.billingClient.deductCredits({ userId: req.user.sub, amount: 1 });
     if (!result?.success) {
       throw new HttpException('Payment Required - Insufficient AI Credits', 402);
     }

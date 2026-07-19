@@ -61,4 +61,28 @@ export class OwnerProxy {
   async setKillSwitch(@Body() dto: KillSwitchDto) {
     return this.ownerClient.setKillSwitch({ active: dto.active });
   }
+
+  @Post('moderation/flag')
+  @ApiOperation({ summary: 'Flag content for review' })
+  async flagContent(@Body() data: { content: string }) {
+    return this.ownerClient.flagContent(data);
+  }
+
+  @Put('moderation/:id/review')
+  @ApiOperation({ summary: 'Review flagged content' })
+  async reviewContent(@Param('id') id: string, @Body() data: { status: string }) {
+    return this.ownerClient.reviewContent({ id, status: data.status });
+  }
+
+  @Get('feature-flags')
+  @ApiOperation({ summary: 'List all feature flags' })
+  async listFlags() {
+    return this.ownerClient.listFlags();
+  }
+
+  @Put('feature-flags/:id')
+  @ApiOperation({ summary: 'Set feature flag status' })
+  async setFlag(@Param('id') id: string, @Body() data: { enabled: boolean }) {
+    return this.ownerClient.setFlag({ id, enabled: data.enabled });
+  }
 }
