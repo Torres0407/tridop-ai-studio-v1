@@ -7,6 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.base.json ./
 COPY nx.json ./
+COPY webpack.config.js ./
 
 # Copy only what's needed for this service + its libs
 COPY libs/common ./libs/common
