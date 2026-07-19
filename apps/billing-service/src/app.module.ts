@@ -5,6 +5,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { BillingController } from './billing.controller';
 import { IdempotencyGuard } from './webhooks/idempotencyGuard';
 import { PaystackWebhook } from './webhooks/paystack.webhook';
+import { PaystackHttpController } from './webhooks/paystack.http.controller';
 import { SubscriptionLapseService } from './dunning/subscriptionLapse.service';
 import { UserCreatedConsumer } from './events/userCreated.consumer';
 import { ProcessedWebhookEventEntity } from './entities/processedWebhookEvent.entity';
@@ -61,7 +62,7 @@ import { AgencyClientEntity } from './entities/agencyClient.entity';
     }),
     BullModule.registerQueue({ name: 'events' }),
   ],
-  controllers: [BillingController],
+  controllers: [BillingController, PaystackHttpController],
   providers: [
     IdempotencyGuard,
     PaystackWebhook,

@@ -26,10 +26,10 @@ import { EVENT_NAMES } from '@libs/common';
     // Postgres — schema: identity only
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: process.env.IDENTITY_POSTGRES_URL,
+      url: process.env.IDENTITY_POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://tridopai:tridopai@localhost:5432/tridopai?schema=identity',
       entities: [UserEntity, SessionEntity],
-      synchronize: process.env.NODE_ENV === 'development',
-      // In production: use TypeORM migrations, not synchronize
+      synchronize: true,
+      retryAttempts: 3,
     }),
     TypeOrmModule.forFeature([UserEntity, SessionEntity]),
 

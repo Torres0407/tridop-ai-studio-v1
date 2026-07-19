@@ -16,4 +16,16 @@ export class OwnerClient extends BaseServiceClient {
   setKillSwitch(payload: { active: boolean }): Promise<any> {
     return this.send('owner.platform.killSwitch.set', payload);
   }
+  flagContent(payload: { content: string }): Promise<any> {
+    return this.send('owner.moderation.flag', payload);
+  }
+  reviewContent(payload: { id: string; status: string }): Promise<any> {
+    return this.send('owner.moderation.review', payload);
+  }
+  listFlags(): Promise<any> {
+    return this.send('owner.featureFlags.list', {});
+  }
+  setFlag(payload: { id: string; enabled: boolean }): Promise<any> {
+    return this.send('owner.featureFlags.set', payload);
+  }
 }

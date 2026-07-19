@@ -45,6 +45,7 @@ import { BillingProxy } from './proxy/billing.proxy';
 import { EngagementProxy } from './proxy/engagement.proxy';
 import { AnalyticsProxy } from './proxy/analytics.proxy';
 import { OwnerProxy } from './proxy/owner.proxy';
+import { SeoProxy } from './proxy/seo.proxy';
 
 const REDIS_OPTIONS = {
   host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
@@ -94,6 +95,7 @@ const REDIS_OPTIONS = {
     EngagementProxy,
     AnalyticsProxy,
     OwnerProxy,
+    SeoProxy,
   ],
   providers: [
     // Global exception filter
@@ -125,6 +127,8 @@ export class AppModule {
         { path: 'auth/signup', method: RequestMethod.POST },
         { path: 'auth/login', method: RequestMethod.POST },
         { path: 'auth/refresh', method: RequestMethod.POST },
+        { path: 'auth/forgot-password', method: RequestMethod.POST },
+        { path: 'auth/reset-password', method: RequestMethod.POST },
         { path: 'categories', method: RequestMethod.GET },
         { path: 'health', method: RequestMethod.GET },
         { path: 'api', method: RequestMethod.GET },     // Swagger UI

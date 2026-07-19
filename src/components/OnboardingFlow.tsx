@@ -36,8 +36,8 @@ import {
   Trash2,
   Send,
   ArrowUpRight,
-  Chrome,
-  Github,
+  Globe as Chrome,
+  Code2 as Github,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -2045,7 +2045,7 @@ export default function OnboardingFlow({
 
                 {/* Form Fields with dynamic focus reporting */}
                 <form 
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
                     setAuthError('');
                     

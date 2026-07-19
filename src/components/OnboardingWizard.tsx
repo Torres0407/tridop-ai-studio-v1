@@ -16,11 +16,11 @@ import {
   Check, 
   ArrowRight, 
   ArrowLeft, 
-  Instagram, 
-  Facebook, 
-  Twitter, 
-  Linkedin, 
-  Youtube, 
+  Share2 as Instagram, 
+  Share2 as Facebook, 
+  Share2 as Twitter, 
+  Share2 as Linkedin, 
+  Share2 as Youtube, 
   MessageSquare,
   Compass
 } from 'lucide-react';

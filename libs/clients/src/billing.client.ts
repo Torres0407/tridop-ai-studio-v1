@@ -28,4 +28,10 @@ export class BillingClient extends BaseServiceClient {
   listPlans(): Promise<any> {
     return this.send('billing.plans.list', {});
   }
+  deductCredits(payload: { userId: string; amount: number }): Promise<{ success: boolean; remaining?: number; reason?: string }> {
+    return this.send('billing.credits.deduct', payload);
+  }
+  handleWebhook(payload: { event: string; orderId: string; status: string; raw?: any }): Promise<any> {
+    return this.send('billing.webhook.paystack', payload);
+  }
 }

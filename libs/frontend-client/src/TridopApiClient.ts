@@ -250,6 +250,20 @@ export class TridopApiClient {
       return this.request<void>('/auth/logout', {
         method: 'DELETE',
       });
+    },
+
+    oauthGoogle: (code: string, redirectUri: string): Promise<AuthTokens> => {
+      return this.request<AuthTokens>('/auth/oauth/google', {
+        method: 'POST',
+        body: JSON.stringify({ code, redirectUri }),
+      });
+    },
+
+    oauthGithub: (code: string, redirectUri: string): Promise<AuthTokens> => {
+      return this.request<AuthTokens>('/auth/oauth/github', {
+        method: 'POST',
+        body: JSON.stringify({ code, redirectUri }),
+      });
     }
   };
 
@@ -665,19 +679,6 @@ export class TridopApiClient {
   };
 
   // ==========================================
-  // Notifications Module
-  // ==========================================
-  public notifications = {
-    subscribeNotifications: (callbacks: {
-      onMessage: (msg: string) => void;
-      onError?: (e: any) => void;
-      onClose?: () => void;
-    }) => {
-      return this.subscribeStream('/notifications/stream', callbacks);
-    }
-  };
-
-  // ==========================================
   // Owner (Admin Panel) Module
   // ==========================================
   public owner = {
@@ -723,6 +724,13 @@ export class TridopApiClient {
   // Notifications Module
   // ==========================================
   public notifications = {
+    subscribeNotifications: (callbacks: {
+      onMessage: (msg: string) => void;
+      onError?: (e: any) => void;
+      onClose?: () => void;
+    }) => {
+      return this.subscribeStream('/notifications/stream', callbacks);
+    },
     stream: (options: { onMessage: (msg: string) => void; onError?: (err: any) => void }): (() => void) => {
       const url = `${this.baseUrl}/notifications/stream`;
       let eventSource: EventSource | null = null;

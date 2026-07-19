@@ -53,6 +53,18 @@ import { OwnerSitesController } from './sites/ownerSites.controller';
         }),
         inject: [ConfigService],
       },
+      {
+        name: 'BILLING_SERVICE',
+        imports: [ConfigModule],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.REDIS,
+          options: {
+            host: new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).hostname,
+            port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port),
+          },
+        }),
+        inject: [ConfigService],
+      },
     ]),
   ],
   controllers: [OwnerController, OwnerUsersController, OwnerSitesController],

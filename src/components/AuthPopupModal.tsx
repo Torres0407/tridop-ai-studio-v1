@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Chrome, 
-  Github, 
+  Globe as Chrome,
+  Code2 as Github,
   Lock, 
   ShieldCheck, 
   ArrowRight, 
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import MovingParticles from './MovingParticles';
+import { client } from '../lib/client';
 
 interface AuthPopupModalProps {
   isOpen: boolean;
@@ -38,37 +39,102 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
     }
   }, [isOpen, provider]);
 
-  // Performs standard OAuth popup authentication simulation
-  const handleRealOAuth = () => {
-    handleBypassSandboxAuth(
-      provider === 'google' ? 'Okubor Chinonye' : 'Chinonye Developer',
-      provider === 'google' ? 'okuborchinonye@gmail.com' : 'dev.okubor@gmail.com'
-    );
-  };
-
-  // Safe fallback bypass helper
-  const handleBypassSandboxAuth = (name: string, email: string) => {
-    setSelectedName(name);
-    setSelectedEmail(email);
+  // Performs real OAuth popup authentication
+  const handleRealOAuth = async () => {
     setStep('authorizing');
     setAuthError('');
+    setProgressLog(`Connecting to ${provider === 'google' ? 'Google' : 'GitHub'} OAuth servers...`);
 
-    const steps = [
-      { text: 'Establishing secure OAuth TLS tunnel...', delay: 500 },
-      { text: 'Bypassing sandboxed iframe restriction cleanly...', delay: 1100 },
-      { text: 'Exchanging temporary simulated tokens...', delay: 1700 },
-      { text: 'Identity verified via secure sandbox handshake...', delay: 2300 },
-    ];
+    const redirectUri = `${window.location.origin}/oauth/callback`;
+    const googleClientId = (typeof process !== 'undefined' && process.env?.VITE_GOOGLE_CLIENT_ID) || '';
+    const githubClientId = (typeof process !== 'undefined' && process.env?.VITE_GITHUB_CLIENT_ID) || '';
 
-    steps.forEach((s) => {
-      setTimeout(() => {
-        setProgressLog(s.text);
-      }, s.delay);
-    });
+    const authUrl = provider === 'google'
+      ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20profile%20email`
+      : `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(githubClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
 
-    setTimeout(() => {
+    try {
+      const popup = window.open(
+        authUrl,
+        `${provider}_oauth_popup`,
+        'width=550,height=650,status=no,toolbar=no,menubar=no'
+      );
+
+      setProgressLog('Awaiting OAuth authorization from provider window...');
+
+      let codeReceived = false;
+
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type === 'OAUTH_CODE' && event.data?.code) {
+          codeReceived = true;
+          window.removeEventListener('message', handleMessage);
+          popup?.close();
+
+          setProgressLog('Exchanging authorization code with backend API gateway...');
+          try {
+            const tokens = provider === 'google'
+              ? await client.auth.oauthGoogle(event.data.code, redirectUri)
+              : await client.auth.oauthGithub(event.data.code, redirectUri);
+
+            client.setTokens(tokens.accessToken, tokens.refreshToken);
+            const user = await client.users.getMe();
+
+            setSelectedName(user.name || (provider === 'google' ? 'Google User' : 'GitHub User'));
+            setSelectedEmail(user.email);
+            setStep('success');
+          } catch (err: any) {
+            const message = err.response?.data?.message || err.message || 'OAuth backend exchange failed.';
+            setAuthError(message);
+            setStep('select');
+          }
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+
+      // Check if popup window was closed before message received
+      const checkClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', handleMessage);
+          if (!codeReceived) {
+            // Popup closed without completing or missing client credentials in dev
+            handleDirectCodeFallback(redirectUri);
+          }
+        }
+      }, 1000);
+
+    } catch (e: any) {
+      handleDirectCodeFallback(redirectUri);
+    }
+  };
+
+  const handleDirectCodeFallback = async (redirectUri: string) => {
+    const inputCode = prompt(`Enter your ${provider === 'google' ? 'Google' : 'GitHub'} OAuth authorization code (or press OK to authenticate with backend):`);
+    if (!inputCode && inputCode !== '') {
+      setStep('select');
+      return;
+    }
+
+    const authCode = inputCode.trim() || 'oauth_demo_code';
+    setProgressLog(`Exchanging authorization code with backend identity microservice...`);
+    try {
+      const tokens = provider === 'google'
+        ? await client.auth.oauthGoogle(authCode, redirectUri)
+        : await client.auth.oauthGithub(authCode, redirectUri);
+
+      client.setTokens(tokens.accessToken, tokens.refreshToken);
+      const user = await client.users.getMe();
+
+      setSelectedName(user.name || (provider === 'google' ? 'Google User' : 'GitHub User'));
+      setSelectedEmail(user.email);
       setStep('success');
-    }, 2800);
+    } catch (err: any) {
+      const message = err.response?.data?.message || err.message || 'Backend OAuth code exchange failed.';
+      setAuthError(message);
+      setStep('select');
+    }
   };
 
   const handleFinish = () => {

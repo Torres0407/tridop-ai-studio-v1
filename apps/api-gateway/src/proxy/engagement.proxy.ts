@@ -30,4 +30,10 @@ export class EngagementProxy {
   async sendCampaignMessage(@Body() data: { siteId: string; contactId: string; channel: string; message: string; to: string }) {
     return this.engagementClient.sendCampaignMessage(data);
   }
+
+  @Post('email')
+  @ApiOperation({ summary: 'Send an email campaign' })
+  async sendEmail(@Body() data: { siteId: string; subject: string; html: string; to: string[] }) {
+    return this.engagementClient.sendEmail(data);
+  }
 }

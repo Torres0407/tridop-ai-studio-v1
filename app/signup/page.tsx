@@ -61,6 +61,40 @@ export default function SignupPage() {
           </div>
         )}
 
+        <div className="flex gap-3">
+          <button 
+            type="button"
+            onClick={async () => {
+              const redirectUri = `${window.location.origin}/oauth/callback`;
+              const googleClientId = (typeof process !== 'undefined' && process.env?.VITE_GOOGLE_CLIENT_ID) || '';
+              const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20profile%20email`;
+              window.open(authUrl, 'google_oauth_popup', 'width=550,height=650');
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-800 bg-slate-950/50 hover:bg-slate-900 text-xs font-semibold text-slate-200 transition-all hover:border-slate-700"
+          >
+            <span>Sign in with Google</span>
+          </button>
+          <button 
+            type="button"
+            onClick={async () => {
+              const redirectUri = `${window.location.origin}/oauth/callback`;
+              const githubClientId = (typeof process !== 'undefined' && process.env?.VITE_GITHUB_CLIENT_ID) || '';
+              const authUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(githubClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
+              window.open(authUrl, 'github_oauth_popup', 'width=550,height=650');
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-800 bg-slate-950/50 hover:bg-slate-900 text-xs font-semibold text-slate-200 transition-all hover:border-slate-700"
+          >
+            <span>Sign in with GitHub</span>
+          </button>
+        </div>
+
+        <div className="relative flex items-center justify-center py-1">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-800"></div>
+          </div>
+          <span className="relative bg-[#09090b] px-3 text-[9px] font-mono text-slate-500 uppercase">Or Continue With Email</span>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
             <label className="block text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">

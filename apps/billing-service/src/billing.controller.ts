@@ -107,12 +107,35 @@ export class BillingController {
 
   @MessagePattern('billing.credits.deduct')
   async deductCredits(@Payload() data: { userId: string; amount: number }) {
-    // In a real implementation, we would check a credits table or subscription limit.
-    // For now, we simulate a successful deduction if they have an active subscription, or just allow it.
-    const sub = await this.subRepo.findOne({ where: { userId: data.userId } });
-    if (!sub || sub.status !== 'active') {
+    const sub = await this.subRepo.findOne({ where: { userId: data.userId, status: 'active' } });
+    if (!sub) {
       return { success: false, reason: 'No active subscription' };
     }
-    return { success: true, remaining: 99 };
+    if (sub.creditsUsed + data.amount > sub.creditsLimit) {
+      return { success: false, reason: 'Credit limit exceeded', remaining: sub.creditsLimit - sub.creditsUsed };
+    }
+    await this.subRepo.increment({ userId: data.userId }, 'creditsUsed', data.amount);
+    return { success: true, remaining: sub.creditsLimit - sub.creditsUsed - data.amount };
+  }
+
+  @MessagePattern('billing.mrr.get')
+  async getMRR() {
+    // Sum price of all active subscriptions
+    const result = await this.subRepo.createQueryBuilder('sub')
+      .where('sub.status = :status', { status: 'active' })
+      .leftJoinAndSelect('sub.planId', 'plan') // assuming planId is the foreign key, or we just fetch plans
+      .getRawMany();
+      
+    // For simplicity, assuming plan price is stored on the subscription or we fetch plans.
+    // Since PlanEntity is separate, let's just do a simple aggregation if we had the plan price.
+    // Or we just return a calculated MRR. Let's do a basic query:
+    const activeSubs = await this.subRepo.find({ where: { status: 'active' } });
+    const plans = await this.planRepo.find();
+    let mrr = 0;
+    for (const sub of activeSubs) {
+      const plan = plans.find(p => p.id === sub.planId);
+      if (plan) mrr += plan.priceMonthly;
+    }
+    return { mrr };
   }
 }
