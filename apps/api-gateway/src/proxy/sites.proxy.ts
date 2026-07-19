@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Req, UseGuards, InternalServerErrorException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SitesClient } from '@libs/clients';
 import { Request } from 'express';
 import { JwtPayload } from '@libs/types';
 import { SiteOwnershipGuard } from '@libs/common';
+import { v2 as cloudinary } from 'cloudinary';
+import { CreateSiteDto, UpdateSiteDto, CreateRecordDto, UpdateRecordDto, UpdateBlockDto, CreateVersionDto, ApplyTemplateDto } from '../dto/sites.dto';
 
 @ApiTags('Sites')
 @ApiBearerAuth()
@@ -14,8 +16,8 @@ export class SitesProxy {
 
   @Post()
   @ApiOperation({ summary: 'Create a new site' })
-  async createSite(@Req() req: Request & { user: JwtPayload }, @Body() data: any) {
-    return this.sitesClient.createSite({ ownerId: req.user.sub, config: data });
+  async createSite(@Req() req: Request & { user: JwtPayload }, @Body() data: CreateSiteDto) {
+    return this.sitesClient.createSite({ ownerId: req.user.sub, config: data.config });
   }
 
   // --- Dynamic Records ---
@@ -24,9 +26,9 @@ export class SitesProxy {
   async createRecord(
     @Param('id') siteId: string,
     @Param('schemaType') schemaType: string,
-    @Body() data: any,
+    @Body() data: CreateRecordDto,
   ) {
-    return this.sitesClient.createRecord({ siteId, schemaType, data });
+    return this.sitesClient.createRecord({ siteId, schemaType, data: data.data });
   }
 
   @Get(':id/records/:schemaType')
@@ -43,9 +45,9 @@ export class SitesProxy {
   async updateRecord(
     @Param('id') siteId: string,
     @Param('recordId') recordId: string,
-    @Body() data: any,
+    @Body() data: UpdateRecordDto,
   ) {
-    return this.sitesClient.updateRecord({ siteId, recordId, update: data });
+    return this.sitesClient.updateRecord({ siteId, recordId, update: data.update });
   }
 
   @Delete(':id/records/:schemaType/:recordId')
@@ -77,8 +79,8 @@ export class SitesProxy {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update a site configuration' })
-  async updateSite(@Param('id') id: string, @Body() data: any) {
-    return this.sitesClient.updateSite({ siteId: id, config: data });
+  async updateSite(@Param('id') id: string, @Body() data: UpdateSiteDto) {
+    return this.sitesClient.updateSite({ siteId: id, config: data.config });
   }
 
   @Delete(':id')
@@ -104,9 +106,9 @@ export class SitesProxy {
   async updateBlock(
     @Param('id') id: string,
     @Param('blockId') blockId: string,
-    @Body() data: { content: any; version: number }
+    @Body() data: UpdateBlockDto
   ) {
-    return this.sitesClient.updateBlock({ siteId: id, blockId, ...data });
+    return this.sitesClient.updateBlock({ siteId: id, blockId, content: data.content, version: data.version });
   }
 
   @Post(':id/versions')
@@ -114,7 +116,7 @@ export class SitesProxy {
   async createVersion(
     @Req() req: Request & { user: JwtPayload },
     @Param('id') id: string,
-    @Body() data: { message: string }
+    @Body() data: CreateVersionDto
   ) {
     return this.sitesClient.createVersion({ siteId: id, userId: req.user.sub, message: data.message });
   }
@@ -165,14 +167,32 @@ export class SitesProxy {
 
   @Post(':id/apply-template')
   @ApiOperation({ summary: 'Apply a template to a site' })
-  async applyTemplate(@Param('id') id: string, @Body() data: { templateId: string }) {
+  async applyTemplate(@Param('id') id: string, @Body() data: ApplyTemplateDto) {
     return this.sitesClient.applyTemplate({ siteId: id, templateId: data.templateId });
   }
 
   @Post(':id/upload-image')
-  @ApiOperation({ summary: 'Upload an image for a site' })
-  async uploadImage(@Param('id') id: string, @Body() data: { fileData: string }) {
-    // Return a mock url for frontend integration until S3 is configured
-    return { url: 'https://mock.tridop.ai/placeholder.png' };
+  @ApiOperation({ summary: 'Upload an image for a site via Cloudinary' })
+  async uploadImage(@Param('id') id: string, @Body() data: { fileData: string; folder?: string }) {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    // Graceful fallback when Cloudinary is not configured
+    if (!cloudName || !apiKey || !apiSecret) {
+      return { url: 'https://mock.tridop.ai/placeholder.png', provider: 'mock' };
+    }
+
+    cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
+
+    try {
+      const result = await cloudinary.uploader.upload(data.fileData, {
+        folder: data.folder ?? `tridopai/sites/${id}`,
+        resource_type: 'auto',
+      });
+      return { url: result.secure_url, publicId: result.public_id, provider: 'cloudinary' };
+    } catch (err: any) {
+      throw new InternalServerErrorException(`Image upload failed: ${err.message}`);
+    }
   }
 }
