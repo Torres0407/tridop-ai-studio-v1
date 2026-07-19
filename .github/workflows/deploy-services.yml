@@ -69,7 +69,7 @@ jobs:
 
       - name: Build and push Docker image
         if: steps.affected.outputs.should_deploy == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: apps/${{ matrix.service }}
           push: true
