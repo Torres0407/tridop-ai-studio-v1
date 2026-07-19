@@ -134,10 +134,10 @@ export class CommerceController {
     const order = this.orderRepo.create({
       id: result.data.reference, // Use Paystack's reference as our Order ID for easy webhook mapping
       siteId: data.siteId,
-      customerEmail: data.email,
-      totalAmount: data.amount,
+      customerId: data.email,
+      totalPrice: data.amount,
+      currency: 'USD',
       status: 'pending',
-      items: data.items || [],
     });
     await this.orderRepo.save(order);
 

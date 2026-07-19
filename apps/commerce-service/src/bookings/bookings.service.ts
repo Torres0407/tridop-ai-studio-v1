@@ -18,7 +18,7 @@ export class BookingsService {
     const conflict = await this.repo.findOne({
       where: {
         siteId: data.siteId,
-        startTime: Between(data.startTime, data.endTime),
+        startTime: Between(data.startTime!, data.endTime!),
       },
     });
     if (conflict) throw new Error('Time slot already booked');
@@ -36,7 +36,7 @@ export class BookingsService {
     return this.repo.find({ where: { siteId }, order: { startTime: 'ASC' } });
   }
 
-  async update(id: string, data: Partial<BookingEntity>): Promise<BookingEntity> {
+  async update(id: string, data: Partial<BookingEntity>): Promise<BookingEntity | null> {
     await this.repo.update({ id }, data);
     return this.repo.findOne({ where: { id } });
   }
