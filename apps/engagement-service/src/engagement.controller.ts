@@ -25,6 +25,12 @@ export class EngagementController {
     return this.emailService.sendEmail(data.to, data.subject, data.body);
   }
 
+  @MessagePattern('notifications.send')
+  async sendNotification(@Payload() data: { userId: string; message: string; type: string }) {
+    // Stub for now. Real implementation would send a push notification or in-app notification
+    return { status: 'sent', userId: data.userId, type: data.type };
+  }
+
   @MessagePattern('sms.send')
   async sendSms(@Payload() data: { to: string; message: string; siteId?: string; contactId?: string }) {
     const result = await this.smsService.send(data.to, data.message);

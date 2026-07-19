@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
+import * as nodemailer from 'nodemailer';
 import { UserEntity } from '../entities/user.entity';
 import { SignupDto, LoginDto, RefreshDto } from './dto/auth.dto';
 import { AuthTokens } from '@libs/types';
@@ -25,13 +27,13 @@ export class AuthService {
     return bcrypt.compare(password, hash);
   }
 
-  async signTokens(userId: string, role: string = 'user'): Promise<AuthTokens> {
+  async signTokens(userId: string, email: string, role: string = 'user'): Promise<AuthTokens> {
     const accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET');
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
     
     if (!accessSecret || !refreshSecret) throw new Error('JWT Secrets missing');
 
-    const accessToken = jwt.sign({ sub: userId, role }, accessSecret, { expiresIn: '15m' });
+    const accessToken = jwt.sign({ sub: userId, email, role }, accessSecret, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ sub: userId }, refreshSecret, { expiresIn: '7d' });
 
     return { accessToken, refreshToken };
@@ -49,7 +51,7 @@ export class AuthService {
     });
 
     await this.userRepo.save(user);
-    return this.signTokens(user.id, user.role);
+    return this.signTokens(user.id, user.email, user.role);
   }
 
   async login(dto: LoginDto): Promise<AuthTokens> {
@@ -73,7 +75,9 @@ export class AuthService {
     const isValid = await this.comparePassword(dto.password, user.passwordHash);
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
 
-    return this.signTokens(user.id, user.role);
+    // Reload with email for token
+    const fullUser = await this.userRepo.findOne({ where: { id: user.id } });
+    return this.signTokens(user.id, fullUser!.email, user.role);
   }
 
   async refresh(dto: RefreshDto): Promise<AuthTokens> {
@@ -84,16 +88,109 @@ export class AuthService {
       const payload = jwt.verify(dto.refreshToken, refreshSecret) as any;
       const user = await this.userRepo.findOne({ where: { id: payload.sub } });
       if (!user || user.isSuspended) throw new UnauthorizedException();
-      return this.signTokens(user.id, user.role);
+      return this.signTokens(user.id, user.email, user.role);
     } catch (e) {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
-  async logout(userId: string): Promise<void> {
-    // In a stateless JWT system, true logout requires a blacklist, 
-    // but typically we rely on token expiry and frontend clearance.
-    return;
+  async logout(userId: string, refreshToken?: string): Promise<void> {
+    // Blacklist the refresh token in Redis for the remainder of its 7-day TTL
+    if (refreshToken) {
+      const Redis = require('ioredis');
+      const redis = new Redis(this.configService.get<string>('REDIS_URL', 'redis://localhost:6379'));
+      await redis.setex(`token:blacklist:${refreshToken}`, 7 * 24 * 60 * 60, userId);
+      await redis.quit();
+    }
+  }
+
+  private getMailTransport() {
+    return nodemailer.createTransport({
+      host: this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com'),
+      port: this.configService.get<number>('SMTP_PORT', 587),
+      secure: false,
+      auth: {
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASS'),
+      },
+    });
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    // Always return the same message to prevent user enumeration
+    const user = await this.userRepo.findOne({ where: { email } });
+    const message = 'If an account with that email exists, a reset link has been sent.';
+
+    if (!user) return { message };
+
+    // Generate a secure random token and store it in Redis for 15 minutes
+    const token = crypto.randomBytes(32).toString('hex');
+    const Redis = require('ioredis');
+    const redis = new Redis(this.configService.get<string>('REDIS_URL', 'redis://localhost:6379'));
+    await redis.setex(`password_reset:${token}`, 15 * 60, user.id);
+    await redis.quit();
+
+    const appUrl = this.configService.get<string>('APP_FRONTEND_URL', 'https://app.tridop.ai');
+    const resetLink = `${appUrl}/reset-password/${token}`;
+
+    const fromName = this.configService.get<string>('SMTP_FROM_NAME', 'TridopAI');
+    const fromEmail = this.configService.get<string>('SMTP_FROM_EMAIL', this.configService.get<string>('SMTP_USER', 'no-reply@tridop.ai'));
+
+    try {
+      const transport = this.getMailTransport();
+      await transport.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to: email,
+        subject: 'Reset your TridopAI password',
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:auto">
+            <h2>Password Reset Request</h2>
+            <p>We received a request to reset the password for your TridopAI account.</p>
+            <a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Reset Password</a>
+            <p style="margin-top:16px;font-size:13px;color:#6b7280">This link expires in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
+          </div>
+        `,
+      });
+    } catch (e) {
+      // Log but don't throw — don't reveal email delivery errors to callers
+      console.error('[Auth] Failed to send password reset email:', e);
+    }
+
+    return { message };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const Redis = require('ioredis');
+    const redis = new Redis(this.configService.get<string>('REDIS_URL', 'redis://localhost:6379'));
+    const key = `password_reset:${token}`;
+    const userId = await redis.get(key);
+
+    if (!userId) {
+      await redis.quit();
+      throw new BadRequestException('Invalid or expired password reset token.');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      await redis.del(key);
+      await redis.quit();
+      throw new BadRequestException('User not found.');
+    }
+
+    // Block OAuth-only users from setting a local password via reset flow
+    if (user.oauthProvider !== 'local') {
+      await redis.del(key);
+      await redis.quit();
+      throw new BadRequestException(`This account uses ${user.oauthProvider} login. Password reset is not available.`);
+    }
+
+    user.passwordHash = await this.hashPassword(newPassword);
+    await this.userRepo.save(user);
+    // Invalidate the token so it can't be reused
+    await redis.del(key);
+    await redis.quit();
+
+    return { message: 'Password has been reset successfully. You may now log in.' };
   }
 
   async oauthGoogle(code: string, redirectUri: string): Promise<AuthTokens> {
@@ -136,7 +233,7 @@ export class AuthService {
       await this.userRepo.save(user);
     }
 
-    return this.signTokens(user.id, user.role);
+    return this.signTokens(user.id, user.email, user.role);
   }
 
   async oauthGithub(code: string, redirectUri: string): Promise<AuthTokens> {
@@ -195,6 +292,6 @@ export class AuthService {
       await this.userRepo.save(user);
     }
 
-    return this.signTokens(user.id, user.role);
+    return this.signTokens(user.id, email, user.role);
   }
 }

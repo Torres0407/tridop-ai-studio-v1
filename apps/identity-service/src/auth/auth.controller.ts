@@ -5,7 +5,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
-import { SignupDto, LoginDto, RefreshDto } from './dto/auth.dto';
+import { SignupDto, LoginDto, RefreshDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { AuthTokens } from '@libs/types';
 
 @Controller()
@@ -28,8 +28,18 @@ export class AuthController {
   }
 
   @MessagePattern('auth.logout')
-  logout(@Payload() { userId }: { userId: string }): Promise<void> {
-    return this.authService.logout(userId);
+  logout(@Payload() data: { userId: string; refreshToken?: string }): Promise<void> {
+    return this.authService.logout(data.userId, data.refreshToken);
+  }
+
+  @MessagePattern('auth.forgotPassword')
+  forgotPassword(@Payload() dto: ForgotPasswordDto): Promise<{ message: string }> {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @MessagePattern('auth.resetPassword')
+  resetPassword(@Payload() dto: ResetPasswordDto): Promise<{ message: string }> {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
   }
 
   // OAuth handlers — exchange auth code for tokens
