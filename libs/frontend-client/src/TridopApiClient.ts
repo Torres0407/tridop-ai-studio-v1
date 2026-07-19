@@ -82,6 +82,9 @@ export class TridopApiClient {
       }
       throw {
         statusCode: response.status,
+        response: {
+          data: errorData,
+        },
         ...errorData,
       };
     }
@@ -247,6 +250,20 @@ export class TridopApiClient {
       return this.request<void>('/auth/logout', {
         method: 'DELETE',
       });
+    },
+
+    oauthGoogle: (code: string, redirectUri: string): Promise<AuthTokens> => {
+      return this.request<AuthTokens>('/auth/oauth/google', {
+        method: 'POST',
+        body: JSON.stringify({ code, redirectUri }),
+      });
+    },
+
+    oauthGithub: (code: string, redirectUri: string): Promise<AuthTokens> => {
+      return this.request<AuthTokens>('/auth/oauth/github', {
+        method: 'POST',
+        body: JSON.stringify({ code, redirectUri }),
+      });
     }
   };
 
@@ -276,7 +293,20 @@ export class TridopApiClient {
       });
     },
 
+    createOrUpdateBusinessProfile: (dto: Partial<BusinessProfile>): Promise<BusinessProfile> => {
+      return this.users.upsertBusinessProfile(dto);
+    },
+
     getCategories: (): Promise<any[]> => {
+      return this.request<any[]>('/categories');
+    }
+  };
+
+  // ==========================================
+  // Categories Module
+  // ==========================================
+  public categories = {
+    getAll: (): Promise<any[]> => {
       return this.request<any[]>('/categories');
     }
   };
@@ -293,6 +323,10 @@ export class TridopApiClient {
     },
 
     list: (): Promise<SiteSchema[]> => {
+      return this.request<SiteSchema[]>('/sites');
+    },
+
+    getAll: (): Promise<SiteSchema[]> => {
       return this.request<SiteSchema[]>('/sites');
     },
 
@@ -372,12 +406,14 @@ export class TridopApiClient {
     },
 
     listTemplates: (): Promise<Template[]> => {
-      console.warn('Backend Bug: GET /sites/templates/all routing conflicts with /sites/:id on Express. Expect route error.');
+      return this.request<Template[]>('/sites/templates/all');
+    },
+
+    getTemplates: (): Promise<Template[]> => {
       return this.request<Template[]>('/sites/templates/all');
     },
 
     applyTemplate: (id: string, templateId: string): Promise<any> => {
-      console.warn('Backend Warning: apply-template is an unimplemented backend stub.');
       return this.request<any>(`/sites/${id}/apply-template`, {
         method: 'POST',
         body: JSON.stringify({ templateId }),
@@ -385,7 +421,6 @@ export class TridopApiClient {
     },
 
     uploadImage: (id: string, fileData: string): Promise<any> => {
-      console.warn('Backend Warning: upload-image requires S3 setup and will throw a 500 error.');
       return this.request<any>(`/sites/${id}/upload-image`, {
         method: 'POST',
         body: JSON.stringify({ fileData }),
@@ -469,10 +504,11 @@ export class TridopApiClient {
   // AI Module
   // ==========================================
   public ai = {
-    prompt: (prompt: string): Promise<string> => {
+    prompt: (payload: string | { prompt: string }): Promise<string> => {
+      const promptText = typeof payload === 'string' ? payload : payload?.prompt;
       return this.request<string>('/ai/prompt', {
         method: 'POST',
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: promptText }),
       });
     },
 
@@ -483,8 +519,31 @@ export class TridopApiClient {
       });
     },
 
+    generateSite: (data: any): Promise<{ status: 'queued'; jobId: string; siteId: string }> => {
+      return this.request<{ status: 'queued'; jobId: string; siteId: string }>('/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
     getGenerateStatus: (jobId: string): Promise<{ status: string; result?: any }> => {
       return this.request<{ status: string; result?: any }>(`/ai/generate/${jobId}`);
+    },
+
+    getGenerationJob: (jobId: string): Promise<{ status: string; result?: any }> => {
+      return this.request<{ status: string; result?: any }>(`/ai/generate/${jobId}`);
+    },
+
+    readStream: (callbacks: {
+      onChunk?: (msg: string) => void;
+      onDone?: () => void;
+      onError?: (e: any) => void;
+    }) => {
+      return this.subscribeStream('/ai/stream', {
+        onMessage: (msg) => callbacks.onChunk?.(msg),
+        onError: callbacks.onError,
+        onClose: callbacks.onDone,
+      });
     },
 
     suggestDomains: (businessName: string, industry?: string): Promise<string[]> => {
@@ -501,31 +560,37 @@ export class TridopApiClient {
       });
     },
 
-    assistCopy: (text: string, tone?: string, instruction?: string): Promise<{ text: string }> => {
+    assistCopy: (payload: { text: string; tone?: string; instruction?: string } | string): Promise<{ text: string }> => {
+      const text = typeof payload === 'string' ? payload : payload.text;
+      const tone = typeof payload === 'object' ? payload.tone : undefined;
+      const instruction = typeof payload === 'object' ? payload.instruction : undefined;
       return this.request<{ text: string }>('/ai/assist-copy', {
         method: 'POST',
         body: JSON.stringify({ text, tone, instruction }),
       });
     },
 
-    generateImage: (prompt: string): Promise<{ url: string; prompt: string }> => {
+    generateImage: (payload: { prompt: string } | string): Promise<{ url: string; prompt: string }> => {
+      const prompt = typeof payload === 'string' ? payload : payload.prompt;
       return this.request<{ url: string; prompt: string }>('/ai/generate-image', {
         method: 'POST',
         body: JSON.stringify({ prompt }),
       });
     },
 
-    generateLegal: (businessName: string, contactEmail: string): Promise<{ privacy: string; terms: string }> => {
+    generateLegal: (payload: { businessName: string; businessType?: string; contactEmail?: string }): Promise<{ privacy: string; terms: string }> => {
       return this.request<{ privacy: string; terms: string }>('/ai/generate-legal', {
         method: 'POST',
-        body: JSON.stringify({ businessName, contactEmail }),
+        body: JSON.stringify({ businessName: payload.businessName, contactEmail: payload.contactEmail || 'legal@tridop.ai' }),
       });
     },
 
-    streamPrompt: (sessionId: string, prompt: string): Promise<{ sessionId: string; status: 'streaming' }> => {
+    streamPrompt: (payload: { prompt: string; siteId?: string } | string): Promise<{ sessionId: string; status: 'streaming' }> => {
+      const prompt = typeof payload === 'string' ? payload : payload.prompt;
+      const siteId = typeof payload === 'object' ? payload.siteId : undefined;
       return this.request<{ sessionId: string; status: 'streaming' }>('/ai/stream', {
         method: 'POST',
-        body: JSON.stringify({ sessionId, prompt }),
+        body: JSON.stringify({ sessionId: siteId || 'default', prompt }),
       });
     },
 
@@ -547,7 +612,6 @@ export class TridopApiClient {
   // ==========================================
   public analytics = {
     getDashboard: (siteId: string): Promise<any> => {
-      console.warn('Backend Bug: GET /analytics/dashboard/site/:siteId uses a protected client method send() and is inaccessible.');
       return this.request<any>(`/analytics/dashboard/site/${siteId}`);
     }
   };
@@ -556,17 +620,29 @@ export class TridopApiClient {
   // Deploy Module
   // ==========================================
   public deploy = {
-    trigger: (siteId: string, versionId?: string): Promise<any> => {
-      console.warn('Backend Bug: POST /deploy/trigger calls non-existent client method triggerDeployment.');
+    trigger: (payload: { siteId: string; versionId?: string } | string): Promise<any> => {
+      const siteId = typeof payload === 'string' ? payload : payload.siteId;
+      const versionId = typeof payload === 'object' ? payload.versionId : undefined;
       return this.request<any>('/deploy/trigger', {
         method: 'POST',
         body: JSON.stringify({ siteId, versionId }),
       });
     },
 
-    getStatus: (siteId: string): Promise<any> => {
-      console.warn('Backend Bug: GET /deploy/status/:siteId calls non-existent client method getDeploymentStatus.');
-      return this.request<any>(`/deploy/status/${siteId}`);
+    getStatus: (jobId: string): Promise<any> => {
+      return this.request<any>(`/deploy/status/${jobId}`);
+    },
+
+    streamLogs: (jobId: string, callbacks: {
+      onChunk?: (msg: string) => void;
+      onDone?: () => void;
+      onError?: (e: any) => void;
+    }) => {
+      return this.subscribeStream(`/deploy/${jobId}/stream`, {
+        onMessage: (msg) => callbacks.onChunk?.(msg),
+        onError: callbacks.onError,
+        onClose: callbacks.onDone,
+      });
     },
 
     subscribeDeployStream: (jobId: string, callbacks: {
@@ -582,8 +658,8 @@ export class TridopApiClient {
   // Domains Module
   // ==========================================
   public domains = {
-    search: (query: string): Promise<any> => {
-      console.warn('Backend Bug: POST /domains/search calls non-existent client method search.');
+    search: (payload: { query: string } | string): Promise<any> => {
+      const query = typeof payload === 'string' ? payload : payload.query;
       return this.request<any>('/domains/search', {
         method: 'POST',
         body: JSON.stringify({ query }),
@@ -591,7 +667,6 @@ export class TridopApiClient {
     },
 
     register: (data: any): Promise<any> => {
-      console.warn('Backend Bug: POST /domains/register calls non-existent client method register.');
       return this.request<any>('/domains/register', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -599,8 +674,49 @@ export class TridopApiClient {
     },
 
     listDomains: (siteId: string): Promise<any> => {
-      console.warn('Backend Bug: GET /domains/site/:siteId calls non-existent client method listDomains.');
       return this.request<any>(`/domains/site/${siteId}`);
+    }
+  };
+
+  // ==========================================
+  // Owner (Admin Panel) Module
+  // ==========================================
+  public owner = {
+    getDashboard: (): Promise<any> => {
+      return this.request<any>('/owner/dashboard');
+    },
+
+    listUsers: (limit = 50, offset = 0): Promise<User[]> => {
+      return this.request<User[]>(`/owner/users?limit=${limit}&offset=${offset}`);
+    },
+
+    suspendUser: (id: string): Promise<void> => {
+      return this.request<void>(`/owner/users/${id}/suspend`, {
+        method: 'PUT',
+      });
+    },
+
+    unsuspendUser: (id: string): Promise<void> => {
+      return this.request<void>(`/owner/users/${id}/unsuspend`, {
+        method: 'PUT',
+      });
+    },
+
+    impersonateUser: (id: string): Promise<AuthTokens> => {
+      return this.request<AuthTokens>(`/owner/users/${id}/impersonate`, {
+        method: 'POST',
+      });
+    },
+
+    listAllSites: (limit = 50, offset = 0): Promise<SiteSchema[]> => {
+      return this.request<SiteSchema[]>(`/owner/sites?limit=${limit}&offset=${offset}`);
+    },
+
+    setKillSwitch: (active: boolean): Promise<{ active: boolean }> => {
+      return this.request<{ active: boolean }>('/owner/kill-switch', {
+        method: 'PUT',
+        body: JSON.stringify({ active }),
+      });
     }
   };
 
@@ -614,55 +730,24 @@ export class TridopApiClient {
       onClose?: () => void;
     }) => {
       return this.subscribeStream('/notifications/stream', callbacks);
-    }
-  };
-
-  // ==========================================
-  // Owner (Admin Panel) Module
-  // ==========================================
-  public owner = {
-    getDashboard: (): Promise<any> => {
-      console.warn('Backend Bug: /owner routes fail compilation due to missing shared library guards.');
-      return this.request<any>('/owner/dashboard');
     },
-
-    listUsers: (limit = 50, offset = 0): Promise<User[]> => {
-      console.warn('Backend Bug: /owner routes fail compilation due to missing shared library guards.');
-      return this.request<User[]>(`/owner/users?limit=${limit}&offset=${offset}`);
-    },
-
-    suspendUser: (id: string): Promise<void> => {
-      console.warn('Backend Bug: /owner routes fail compilation due to missing shared library guards.');
-      return this.request<void>(`/owner/users/${id}/suspend`, {
-        method: 'PUT',
-      });
-    },
-
-    unsuspendUser: (id: string): Promise<void> => {
-      console.warn('Backend Bug: /owner routes fail compilation due to missing shared library guards.');
-      return this.request<void>(`/owner/users/${id}/unsuspend`, {
-        method: 'PUT',
-      });
-    },
-
-    impersonateUser: (id: string): Promise<AuthTokens> => {
-      console.warn('Backend Bug: /owner routes fail compilation due to missing shared library guards.');
-      return this.request<AuthTokens>(`/owner/users/${id}/impersonate`, {
-        method: 'POST',
-      });
-    },
-
-    listAllSites: (limit = 50, offset = 0): Promise<SiteSchema[]> => {
-      console.warn('Backend Bug: /owner routes fail compilation due to missing shared library guards.');
-      return this.request<SiteSchema[]>(`/owner/sites?limit=${limit}&offset=${offset}`);
-    },
-
-    setKillSwitch: (active: boolean): Promise<{ active: boolean }> => {
-      console.warn('Backend Bug: /owner routes fail compilation due to missing shared library guards.');
-      return this.request<{ active: boolean }>('/owner/kill-switch', {
-        method: 'PUT',
-        body: JSON.stringify({ active }),
-      });
+    stream: (options: { onMessage: (msg: string) => void; onError?: (err: any) => void }): (() => void) => {
+      const url = `${this.baseUrl}/notifications/stream`;
+      let eventSource: EventSource | null = null;
+      try {
+        eventSource = new EventSource(url);
+        eventSource.onmessage = (event) => {
+          options.onMessage(event.data);
+        };
+        eventSource.onerror = (err) => {
+          options.onError?.(err);
+        };
+      } catch (err) {
+        options.onError?.(err);
+      }
+      return () => {
+        eventSource?.close();
+      };
     }
   };
 }

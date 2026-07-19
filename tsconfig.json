@@ -1,5 +1,37 @@
 {
   "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@libs/clients": ["libs/clients/src/index.ts"],
+      "@libs/clients/*": ["libs/clients/src/*"],
+      "@libs/common": ["libs/common/src/index.ts"],
+      "@libs/common/*": ["libs/common/src/*"],
+      "@libs/types": ["libs/types/src/index.ts"],
+      "@libs/types/*": ["libs/types/src/*"],
+      "@libs/frontend-client": ["libs/frontend-client/src/index.ts"],
+      "@libs/frontend-client/*": ["libs/frontend-client/src/*"]
+    },
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
   "compileOnSave": false,
   "files": [],
   "references": []

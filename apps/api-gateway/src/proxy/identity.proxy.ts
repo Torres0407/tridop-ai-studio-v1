@@ -72,6 +72,20 @@ export class AuthProxy {
   resetPassword(@Body() dto: ResetPasswordPayload) {
     return this.identity.resetPassword(dto);
   }
+
+  @Public()
+  @Post('oauth/google')
+  @ApiOperation({ summary: 'Authenticate using Google OAuth authorization code' })
+  oauthGoogle(@Body() dto: { code: string; redirectUri: string }) {
+    return this.identity.oauthGoogle(dto);
+  }
+
+  @Public()
+  @Post('oauth/github')
+  @ApiOperation({ summary: 'Authenticate using GitHub OAuth authorization code' })
+  oauthGithub(@Body() dto: { code: string; redirectUri: string }) {
+    return this.identity.oauthGithub(dto);
+  }
 }
 
 @ApiTags('Users')

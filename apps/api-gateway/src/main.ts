@@ -1,7 +1,4 @@
-// ─── api-gateway/src/main.ts ─────────────────────────────────────────────────
-// OTel MUST be the very first call — before NestFactory, before any import
-// that triggers module initialization. §10
-
+import 'reflect-metadata';
 import { initTracing } from '@libs/common';
 initTracing('api-gateway');
 

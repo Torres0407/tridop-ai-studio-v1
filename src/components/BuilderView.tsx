@@ -1,0 +1,1635 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Search, 
+  Sparkles, 
+  Monitor, 
+  Tablet, 
+  Smartphone, 
+  Undo, 
+  Redo, 
+  Trash2, 
+  ArrowUp, 
+  ArrowDown, 
+  Copy, 
+  Check, 
+  ExternalLink, 
+  Palette, 
+  ChevronDown, 
+  Plus, 
+  History, 
+  Play, 
+  ChevronRight, 
+  User, 
+  Globe, 
+  Menu, 
+  X, 
+  Info, 
+  Upload, 
+  MousePointerClick,
+  RefreshCw
+} from 'lucide-react';
+import TriMascot from './TriMascot';
+import { Project } from '../types';
+
+// Define structures for our page builder blocks
+export interface Block {
+  id: string;
+  type: 'navigation' | 'hero' | 'content' | 'media' | 'socialProof' | 'cta' | 'footer';
+  name: string;
+  data: {
+    logo?: string;
+    links?: string[];
+    title?: string;
+    subtitle?: string;
+    description?: string;
+    buttonText1?: string;
+    buttonText2?: string;
+    items?: Array<{ title: string; desc: string; val?: string; metric?: string }>;
+    accentColor?: string;
+    placeholderImage?: string;
+    formLabel?: string;
+    formPlaceholder?: string;
+    copyright?: string;
+  };
+  styles: {
+    bg: string;
+    text: string;
+    accent: string;
+    paddingY: string;
+    roundedButtons: boolean;
+  };
+}
+
+interface BuilderViewProps {
+  user: { name: string; email: string };
+  onBackToDashboard: () => void;
+  selectedPrompt?: string;
+  project?: Project | null;
+  onUpdateProject?: (updated: Project) => void;
+}
+
+export default function BuilderView({ 
+  user, 
+  onBackToDashboard, 
+  selectedPrompt,
+  project,
+  onUpdateProject
+}: BuilderViewProps) {
+  // Preset blocks that can be added to the builder
+  const blockPresets: Omit<Block, 'id'>[] = [
+    // 1. NAVIGATION
+    {
+      type: 'navigation',
+      name: 'Minimal Header',
+      data: {
+        logo: '⚡ Tridop.app',
+        links: ['Home', 'Features', 'Pricing', 'Docs'],
+        buttonText1: 'Launch App'
+      },
+      styles: { bg: 'bg-slate-950/80 backdrop-blur-md border-b border-slate-900', text: 'text-slate-200', accent: 'bg-cyan-500 text-slate-950', paddingY: 'py-4', roundedButtons: false }
+    },
+    {
+      type: 'navigation',
+      name: 'Centered Header',
+      data: {
+        logo: '🌸 Petal.design',
+        links: ['Portfolio', 'Works', 'Process', 'Contact'],
+        buttonText1: 'Hire Us'
+      },
+      styles: { bg: 'bg-slate-900/40 border-b border-slate-800/50', text: 'text-slate-300', accent: 'bg-purple-500 text-white', paddingY: 'py-5', roundedButtons: true }
+    },
+    // 2. HERO
+    {
+      type: 'hero',
+      name: 'Classic Split',
+      data: {
+        title: 'Synthesize Your Entire App with Ambient AI',
+        subtitle: 'From idea to interactive responsive sandbox deployment in exactly 12 seconds.',
+        buttonText1: 'Synthesize Now',
+        buttonText2: 'Watch Cinematic Demo',
+        placeholderImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60'
+      },
+      styles: { bg: 'bg-slate-950', text: 'text-slate-100', accent: 'bg-cyan-400 text-slate-950 hover:bg-cyan-300', paddingY: 'py-20 md:py-28', roundedButtons: false }
+    },
+    {
+      type: 'hero',
+      name: 'Centered Focus',
+      data: {
+        title: 'Architecting Clean Digital Futures',
+        subtitle: 'Fully typed custom backend APIs, reactive web modules, and automatic container deployments with a single prompt.',
+        buttonText1: 'Start For Free',
+        buttonText2: 'Learn More'
+      },
+      styles: { bg: 'bg-gradient-to-b from-slate-950 to-slate-900', text: 'text-slate-100', accent: 'bg-purple-500 text-white hover:bg-purple-400', paddingY: 'py-24 md:py-32', roundedButtons: true }
+    },
+    // 3. CONTENT
+    {
+      type: 'content',
+      name: 'Feature Bento Grid',
+      data: {
+        title: 'Supercharged Platform Architecture',
+        subtitle: 'Our compilation cluster utilizes low-latency sandboxing to secure your applications.',
+        items: [
+          { title: 'Fullstack Compiles', desc: 'No-boilerplate routing. Auto-bundled server files.' },
+          { title: 'Durable Cloud Storage', desc: 'Auto-provisioned Firestore DB modules in 2 seconds.' },
+          { title: 'Production Ready', desc: 'Continuous deployment with edge CDN optimization.' }
+        ]
+      },
+      styles: { bg: 'bg-slate-950', text: 'text-slate-300', accent: 'bg-cyan-500', paddingY: 'py-16 md:py-24', roundedButtons: false }
+    },
+    {
+      type: 'content',
+      name: 'Performance Stats',
+      data: {
+        title: 'Engineered for Performance',
+        subtitle: 'Metrics demonstrating the real-time speed of the Tridop compilation network.',
+        items: [
+          { title: 'Average Startup Time', desc: 'Unbelievably quick container spin-up', metric: '1.2s' },
+          { title: 'Uptime SLA', desc: 'Guaranteed high-availability clusters', metric: '99.99%' },
+          { title: 'Global Edge CDNs', desc: 'Fast load speeds on all continents', metric: '42ms' }
+        ]
+      },
+      styles: { bg: 'bg-slate-900', text: 'text-slate-200', accent: 'bg-emerald-500', paddingY: 'py-16', roundedButtons: true }
+    },
+    // 4. MEDIA
+    {
+      type: 'media',
+      name: 'Dashboard Spotlight',
+      data: {
+        title: 'Unified Operational Telemetry',
+        subtitle: 'Track your systems directly via a highly performant vector graphics layout.',
+        placeholderImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1000&auto=format&fit=crop&q=60'
+      },
+      styles: { bg: 'bg-slate-950', text: 'text-slate-300', accent: 'bg-cyan-500', paddingY: 'py-16', roundedButtons: false }
+    },
+    // 5. SOCIAL PROOF
+    {
+      type: 'socialProof',
+      name: 'Testimonial Bento Grid',
+      data: {
+        title: 'What developers are deploying',
+        items: [
+          { title: 'Sarah Jenkins, CTO', desc: 'Tridop allowed our product teams to prototype over 40 distinct mock features inside isolated preview domains in less than a week.' },
+          { title: 'Marc Chen, Tech Lead', desc: 'The AI prompt editing is a game-changer. I literally asked to change all CTA colors, and it adapted the styling perfectly.' }
+        ]
+      },
+      styles: { bg: 'bg-slate-950/40 border-y border-slate-900', text: 'text-slate-300', accent: 'bg-cyan-500', paddingY: 'py-16', roundedButtons: false }
+    },
+    // 6. FORMS / CTA
+    {
+      type: 'cta',
+      name: 'Newsletter Signup',
+      data: {
+        title: 'Subscribe to Synthesized Tech',
+        subtitle: 'Get curated alerts regarding compiling runtimes, Docker image sizes, and server-side optimizations.',
+        buttonText1: 'Subscribe Now',
+        formPlaceholder: 'enter your email address'
+      },
+      styles: { bg: 'bg-slate-900', text: 'text-slate-100', accent: 'bg-cyan-500 text-slate-950', paddingY: 'py-16 md:py-20', roundedButtons: false }
+    },
+    {
+      type: 'cta',
+      name: 'Enterprise Invitation',
+      data: {
+        title: 'Ready to scale sandbox domains?',
+        subtitle: 'Unlock dedicated cluster hardware, custom domain mappings, and database instances.',
+        buttonText1: 'Schedule Call',
+        buttonText2: 'Request Quote'
+      },
+      styles: { bg: 'bg-gradient-to-r from-purple-950/50 to-slate-950 border border-purple-950/50 rounded-2xl mx-6 my-12', text: 'text-slate-100', accent: 'bg-purple-500 text-white', paddingY: 'py-14 px-8', roundedButtons: true }
+    },
+    // 7. FOOTER
+    {
+      type: 'footer',
+      name: 'Simple Footer',
+      data: {
+        copyright: '© 2026 Tridop Synthesizer Labs Inc. All rights reserved.',
+        logo: '⚡ Tridop Build'
+      },
+      styles: { bg: 'bg-slate-950 border-t border-slate-900', text: 'text-slate-500', accent: 'bg-cyan-500', paddingY: 'py-8', roundedButtons: false }
+    }
+  ];
+
+  // Starting layout of the live site canvas
+  const initialBlocks: Block[] = [
+    {
+      id: 'b-nav',
+      type: 'navigation',
+      name: 'Minimal Header',
+      data: {
+        logo: '⚡ ZippyDelivery',
+        links: ['Menu', 'Locations', 'About Us', 'Contact'],
+        buttonText1: 'Order Now'
+      },
+      styles: { bg: 'bg-slate-950 border-b border-slate-900', text: 'text-slate-200', accent: 'bg-cyan-400 text-slate-950', paddingY: 'py-4', roundedButtons: true }
+    },
+    {
+      id: 'b-hero',
+      type: 'hero',
+      name: 'Classic Split',
+      data: {
+        title: 'Gourmet Meals Delivered To Your Vault door',
+        subtitle: 'Hyper-local fresh farm selections prepared by cloud-chefs. Dispatched in pressurized cryogenic drones.',
+        buttonText1: 'Browse Menu',
+        buttonText2: 'Watch Drone Live Feed',
+        placeholderImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60'
+      },
+      styles: { bg: 'bg-slate-950', text: 'text-slate-100', accent: 'bg-cyan-400 text-slate-950 hover:bg-cyan-300', paddingY: 'py-20', roundedButtons: true }
+    },
+    {
+      id: 'b-features',
+      type: 'content',
+      name: 'Feature Bento Grid',
+      data: {
+        title: 'Next-Gen Food Logistics',
+        subtitle: 'Why our drone network delivers food fresher than your local brick-and-mortar restaurants.',
+        items: [
+          { title: 'Sub-Zero Pods', desc: 'Meals are kept in active thermostatic locks until the handoff.' },
+          { title: 'Edge Cloud Kitchens', desc: 'Strategically distributed hubs to maintain a 12-minute SLA.' },
+          { title: 'Robotic Sanitation', desc: 'Zero manual contact. Fully automated prep and sealing.' }
+        ]
+      },
+      styles: { bg: 'bg-slate-950/80', text: 'text-slate-300', accent: 'bg-cyan-400', paddingY: 'py-16', roundedButtons: true }
+    },
+    {
+      id: 'b-cta',
+      type: 'cta',
+      name: 'Newsletter Signup',
+      data: {
+        title: 'Unlock Cryo-Coupon Rewards',
+        subtitle: 'Enter your details to receive weekly dispatch code letters.',
+        buttonText1: 'Claim Code',
+        formPlaceholder: 'enter military-grade courier email'
+      },
+      styles: { bg: 'bg-slate-900', text: 'text-slate-100', accent: 'bg-cyan-400 text-slate-950', paddingY: 'py-14', roundedButtons: true }
+    },
+    {
+      id: 'b-footer',
+      type: 'footer',
+      name: 'Simple Footer',
+      data: {
+        copyright: '© 2026 Zippy Food Labs Corp. Encrypted dispatch systems.',
+        logo: '⚡ Zippy'
+      },
+      styles: { bg: 'bg-slate-950 border-t border-slate-900', text: 'text-slate-500', accent: 'bg-cyan-400', paddingY: 'py-8', roundedButtons: true }
+    }
+  ];
+
+  // State
+  const getInitialBlocksWithTheme = (): Block[] => {
+    const hasDarkThemeRequest = (promptText: string): boolean => {
+      const lower = (promptText || '').toLowerCase();
+      const darkKeywords = [
+        'dark', 'black', 'slate', 'charcoal', 'night', 'dark mode', 'dark-mode', 
+        'darktheme', 'dark-theme'
+      ];
+      return darkKeywords.some(keyword => lower.includes(keyword));
+    };
+
+    const isLight = selectedPrompt ? !hasDarkThemeRequest(selectedPrompt) : true; // Default to white background unless specified!
+
+    if (isLight) {
+      return initialBlocks.map(b => {
+        let bg = 'bg-white';
+        let text = 'text-slate-800';
+        let accent = b.styles.accent;
+        if (b.type === 'navigation') {
+          bg = 'bg-white border-b border-slate-100';
+          text = 'text-slate-800';
+        } else if (b.type === 'footer') {
+          bg = 'bg-slate-50 border-t border-slate-100';
+          text = 'text-slate-500';
+        } else if (b.type === 'cta') {
+          bg = 'bg-slate-50';
+          text = 'text-slate-800';
+        } else if (b.type === 'content' && b.name === 'Performance Stats') {
+          bg = 'bg-slate-50';
+          text = 'text-slate-800';
+        }
+        return {
+          ...b,
+          styles: {
+            ...b.styles,
+            bg,
+            text,
+            accent: accent.includes('text-slate-950') ? accent : `${accent} text-white`
+          }
+        };
+      });
+    }
+    return initialBlocks;
+  };
+
+  const themedInitialBlocks = getInitialBlocksWithTheme();
+  const initialPageBlocks = project?.blocks || themedInitialBlocks;
+
+  // State
+  const [blocks, setBlocks] = useState<Block[]>(initialPageBlocks);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>('b-hero');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  
+  // Undo/Redo/Versions State
+  const [history, setHistory] = useState<Block[][]>([initialPageBlocks]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const [versionList, setVersionList] = useState<Array<{ name: string; timestamp: string; blocks: Block[] }>>([
+    { name: 'Initial Environment Restored', timestamp: '17:07', blocks: initialPageBlocks }
+  ]);
+
+  // Sync state when project changes
+  useEffect(() => {
+    if (project?.blocks) {
+      setBlocks(project.blocks);
+      setHistory([project.blocks]);
+      setHistoryIndex(0);
+      setVersionList([
+        { name: 'Workspace Restored', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), blocks: project.blocks }
+      ]);
+    }
+  }, [project?.id]);
+
+  // Auto-save changes back to project history
+  useEffect(() => {
+    if (project && onUpdateProject && blocks !== project.blocks) {
+      const isIdentical = JSON.stringify(blocks) === JSON.stringify(project.blocks);
+      if (!isIdentical) {
+        onUpdateProject({
+          ...project,
+          blocks,
+          lastUpdated: 'Just now'
+        });
+      }
+    }
+  }, [blocks, project, onUpdateProject]);
+
+  // AI Assistant Bottom Panel State
+  const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [aiWorking, setAiWorking] = useState<boolean>(false);
+  const [aiStatusLines, setAiStatusLines] = useState<string[]>([]);
+  const [showNotification, setShowNotification] = useState<string | null>(null);
+
+  // Publish Success Modal
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [publishProgress, setPublishProgress] = useState<number>(0);
+  const [publishSuccess, setPublishSuccess] = useState<boolean>(false);
+  const [publishedUrl, setPublishedUrl] = useState<string>('');
+  const [publishingStage, setPublishingStage] = useState<string>('');
+
+  // Floating mascot talk text inside the builder
+  const [mascotText, setMascotText] = useState<string>("Welcome to the Builder! Feel free to modify text, drag blocks, or type an AI prompt below.");
+  const [mascotExpression, setMascotExpression] = useState<'idle' | 'excited' | 'thinking' | 'talking' | 'wink' | 'pointing'>('idle');
+
+  // Trigger auto-mascot text on selected block change
+  useEffect(() => {
+    if (selectedBlockId) {
+      const b = blocks.find(x => x.id === selectedBlockId);
+      if (b) {
+        setMascotText(`Inspecting the "${b.name}". You can customize its wording, background padding, or colors in the properties panel.`);
+        setMascotExpression('pointing');
+      }
+    } else {
+      setMascotText("No block is selected right now. Click any block in the center canvas to customize its fields.");
+      setMascotExpression('idle');
+    }
+  }, [selectedBlockId]);
+
+  // Push state to undo/redo history helper
+  const updateBlocksWithHistory = (newBlocks: Block[], actionName?: string) => {
+    const updatedHistory = history.slice(0, historyIndex + 1);
+    setHistory([...updatedHistory, newBlocks]);
+    setHistoryIndex(updatedHistory.length);
+    setBlocks(newBlocks);
+
+    if (actionName) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setVersionList(prev => [
+        { name: actionName, timestamp: timeStr, blocks: newBlocks },
+        ...prev
+      ]);
+      triggerToast(actionName);
+    }
+  };
+
+  const triggerToast = (msg: string) => {
+    setShowNotification(msg);
+    setTimeout(() => {
+      setShowNotification(null);
+    }, 2500);
+  };
+
+  // Undo / Redo core mechanics
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prevIdx = historyIndex - 1;
+      setHistoryIndex(prevIdx);
+      setBlocks(history[prevIdx]);
+      triggerToast("Undo applied");
+      setMascotText("Undoing that step for you! Restoring previous layout state.");
+      setMascotExpression('wink');
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const nextIdx = historyIndex + 1;
+      setHistoryIndex(nextIdx);
+      setBlocks(history[nextIdx]);
+      triggerToast("Redo applied");
+      setMascotText("Redoing that action! Returning to the synthesized state.");
+      setMascotExpression('excited');
+    }
+  };
+
+  // Canvas Action Operations
+  const handleMoveBlock = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === blocks.length - 1) return;
+
+    const updated = [...blocks];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+
+    updateBlocksWithHistory(updated, `Moved Block ${direction}`);
+    setMascotText(`Reordered layout! Swapped block positions.`);
+    setMascotExpression('excited');
+  };
+
+  const handleDeleteBlock = (id: string) => {
+    const bName = blocks.find(x => x.id === id)?.name || 'Block';
+    const filtered = blocks.filter(x => x.id !== id);
+    if (selectedBlockId === id) {
+      setSelectedBlockId(filtered[0]?.id || null);
+    }
+    updateBlocksWithHistory(filtered, `Deleted ${bName}`);
+    setMascotText(`Removed "${bName}" from the project scope.`);
+    setMascotExpression('talking');
+  };
+
+  const handleDuplicateBlock = (index: number) => {
+    const blockToCopy = blocks[index];
+    const duplicated: Block = {
+      ...blockToCopy,
+      id: `dup-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: `${blockToCopy.name} (Copy)`
+    };
+    const updated = [...blocks];
+    updated.splice(index + 1, 0, duplicated);
+    updateBlocksWithHistory(updated, `Duplicated ${blockToCopy.name}`);
+    setSelectedBlockId(duplicated.id);
+    setMascotText(`Duplicated "${blockToCopy.name}" and positioned it right below.`);
+    setMascotExpression('wink');
+  };
+
+  // Add block from Left Preset panel
+  const handleAddPresetBlock = (preset: Omit<Block, 'id'>) => {
+    const newBlock: Block = {
+      ...preset,
+      id: `b-preset-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    };
+    
+    // Append to end, or after selected block
+    let updated = [...blocks];
+    if (selectedBlockId) {
+      const idx = blocks.findIndex(b => b.id === selectedBlockId);
+      if (idx !== -1) {
+        updated.splice(idx + 1, 0, newBlock);
+      } else {
+        updated.push(newBlock);
+      }
+    } else {
+      updated.push(newBlock);
+    }
+
+    updateBlocksWithHistory(updated, `Added ${preset.name}`);
+    setSelectedBlockId(newBlock.id);
+    setMascotText(`Added a brand new "${preset.name}" into your workspace layout canvas.`);
+    setMascotExpression('excited');
+  };
+
+  // Modify custom data properties of the active block
+  const handlePropertyChange = (field: string, val: any) => {
+    if (!selectedBlockId) return;
+    const updated = blocks.map(b => {
+      if (b.id === selectedBlockId) {
+        return {
+          ...b,
+          data: {
+            ...b.data,
+            [field]: val
+          }
+        };
+      }
+      return b;
+    });
+    // Silent update during active typing (no new history item yet to avoid polluting history with every letter)
+    setBlocks(updated);
+  };
+
+  // Commit changes after keyboard input blur (so we record nice distinct snapshots in version history)
+  const handlePropertyBlur = (fieldName: string) => {
+    const active = blocks.find(b => b.id === selectedBlockId);
+    updateBlocksWithHistory(blocks, `Edited ${active?.name} - ${fieldName}`);
+  };
+
+  // Update styles of selected block
+  const handleStyleChange = (styleKey: string, val: any) => {
+    if (!selectedBlockId) return;
+    const updated = blocks.map(b => {
+      if (b.id === selectedBlockId) {
+        return {
+          ...b,
+          styles: {
+            ...b.styles,
+            [styleKey]: val
+          }
+        };
+      }
+      return b;
+    });
+    updateBlocksWithHistory(updated, `Style tweak: ${styleKey}`);
+  };
+
+  // Categories list
+  const categories = [
+    { id: 'all', label: 'All Blocks' },
+    { id: 'navigation', label: 'Navigation' },
+    { id: 'hero', label: 'Hero Sections' },
+    { id: 'content', label: 'Content & Bentos' },
+    { id: 'media', label: 'Media Highlights' },
+    { id: 'socialProof', label: 'Social Proof' },
+    { id: 'cta', label: 'Forms / Call to Action' },
+    { id: 'footer', label: 'Footers' }
+  ];
+
+  // Filtering presets
+  const filteredPresets = blockPresets.filter(p => {
+    const matchCat = activeCategory === 'all' || p.type === activeCategory;
+    const matchQuery = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                       (p.type || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchQuery;
+  });
+
+  // AI Prompt compiler simulation
+  const handleApplyAiPrompt = (promptText: string) => {
+    if (!promptText.trim()) return;
+    setAiWorking(true);
+    setAiStatusLines([]);
+    setMascotExpression('thinking');
+    setMascotText("Analyzing instructions... consulting compilation neural nets to translate this request into code adjustments.");
+
+    const lines = [
+      "🔍 Parsing prompt inputs: \"" + promptText + "\"",
+      "🧬 Running semantic builder mappings on layout...",
+      "💻 Tweaking CSS styles and adjusting variables...",
+      "💥 Compiling custom HTML nodes with optimized performance...",
+      "✨ Injecting state modifiers... Done!"
+    ];
+
+    let currentLineIdx = 0;
+    const interval = setInterval(() => {
+      if (currentLineIdx < lines.length) {
+        setAiStatusLines(prev => [...prev, lines[currentLineIdx]]);
+        currentLineIdx++;
+      } else {
+        clearInterval(interval);
+        
+        // Execute the modification based on prompt content
+        const lower = promptText.toLowerCase();
+        let updated = [...blocks];
+        let desc = "AI Synthesis Completed";
+
+        if (lower.includes('dark mode') || lower.includes('dark slate') || lower.includes('deep dark')) {
+          updated = blocks.map(b => ({
+            ...b,
+            styles: { ...b.styles, bg: 'bg-slate-950', text: 'text-slate-100' }
+          }));
+          desc = "AI: Switch to Dark Theme";
+          setMascotText("I have converted the template style guide to a sleek Deep Dark mode with high contrast.");
+          setMascotExpression('excited');
+        } else if (lower.includes('emerald') || lower.includes('green theme')) {
+          updated = blocks.map(b => ({
+            ...b,
+            styles: { ...b.styles, accent: 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' }
+          }));
+          desc = "AI: Switch Accents to Emerald";
+          setMascotText("Styling updated! Applied an elegant organic Emerald palette to all CTA buttons.");
+          setMascotExpression('wink');
+        } else if (lower.includes('rounded') || lower.includes('pill')) {
+          updated = blocks.map(b => ({
+            ...b,
+            styles: { ...b.styles, roundedButtons: true }
+          }));
+          desc = "AI: Apply Round Button Styles";
+          setMascotText("Synthesized styling: Converted all buttons and interface cards to modern pill shapes.");
+          setMascotExpression('excited');
+        } else if (lower.includes('sharp') || lower.includes('square')) {
+          updated = blocks.map(b => ({
+            ...b,
+            styles: { ...b.styles, roundedButtons: false }
+          }));
+          desc = "AI: Apply Square Button Styles";
+          setMascotText("Style synthesized: Reset all buttons to clean architectural sharp borders.");
+          setMascotExpression('idle');
+        } else if (lower.includes('contact') || lower.includes('testimonial') || lower.includes('review')) {
+          // Append testimonial
+          const testimonialPreset = blockPresets.find(p => p.type === 'socialProof');
+          if (testimonialPreset) {
+            const newB: Block = {
+              ...testimonialPreset,
+              id: `ai-b-${Date.now()}`
+            };
+            updated.splice(updated.length - 1, 0, newB); // Insert before footer
+            desc = "AI: Insert Testimonial Block";
+            setMascotText("Injected a dynamic Customer Review Bento card grid directly above your footer.");
+            setMascotExpression('wink');
+          }
+        } else {
+          // Generic modification (e.g., customize the first hero title)
+          updated = blocks.map(b => {
+            if (b.type === 'hero') {
+              return {
+                ...b,
+                data: {
+                  ...b.data,
+                  title: promptText.charAt(0).toUpperCase() + promptText.slice(1)
+                }
+              };
+            }
+            return b;
+          });
+          desc = "AI: Prompt Custom Headings";
+          setMascotText("Synthesized custom copy values across your primary hero segments.");
+          setMascotExpression('excited');
+        }
+
+        updateBlocksWithHistory(updated, desc);
+        setAiWorking(false);
+        setAiPrompt('');
+      }
+    }, 700);
+  };
+
+  // Publish flow simulation
+  const handlePublish = () => {
+    setIsPublishing(true);
+    setPublishProgress(0);
+    setPublishSuccess(false);
+    
+    const stages = [
+      "Compressing layouts & transpiling template assets...",
+      "Generating static build files and CSS code-splits...",
+      "Syncing with Google Cloud DNS clusters...",
+      "Provisioning secure HTTPS edge certificates...",
+      "Warming up distributed CDN nodes globally..."
+    ];
+
+    let stageIdx = 0;
+    setPublishingStage(stages[0]);
+
+    const interval = setInterval(() => {
+      setPublishProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setPublishSuccess(true);
+          const domainPrefix = user.name.toLowerCase().replace(/\s+/g, '-');
+          setPublishedUrl(`https://${domainPrefix}-zippy-food.tridop.site`);
+          setMascotText("Whoa! Your project is live! A full-stack optimized sandbox is deployed to the web.");
+          setMascotExpression('excited');
+          return 100;
+        }
+        
+        const nextProgress = prev + 10;
+        const currentStage = Math.floor(nextProgress / 20);
+        if (stages[currentStage] && stages[currentStage] !== publishingStage) {
+          setPublishingStage(stages[currentStage]);
+        }
+        return nextProgress;
+      });
+    }, 400);
+  };
+
+  return (
+    <div className="w-full h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none relative overflow-hidden">
+      
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showNotification && (
+          <motion.div 
+            initial={{ opacity: 0, y: -40, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.9 }}
+            className="absolute top-16 left-1/2 -translate-x-1/2 z-50 glass-panel border-cyan-500/30 px-5 py-2.5 rounded-xl shadow-[0_4px_20px_rgba(6,182,212,0.15)] flex items-center gap-2 text-xs"
+          >
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="font-mono text-slate-300">Action logged:</span>
+            <span className="font-semibold text-cyan-400">{showNotification}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TOP COMPILER NAV BAR */}
+      <header className="h-14 border-b border-slate-900 bg-slate-950 px-4 flex justify-between items-center z-30">
+        
+        {/* Brand logo & Session badge */}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onBackToDashboard}
+            className="p-1.5 rounded-lg border border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-100 hover:border-slate-700 transition-all text-xs font-mono"
+          >
+            ← Console
+          </button>
+          <div className="h-4 w-px bg-slate-900" />
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-200">Workspace:</span>
+            <span className="text-xs font-mono text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/10">
+              zippy-delivery-pro
+            </span>
+          </div>
+        </div>
+
+        {/* Viewport & History Controllers */}
+        <div className="flex items-center gap-6">
+          
+          {/* Viewport switch */}
+          <div className="flex items-center gap-1 bg-slate-900/50 p-1 border border-slate-900 rounded-lg">
+            <button
+              onClick={() => setViewport('desktop')}
+              className={`p-1.5 rounded ${viewport === 'desktop' ? 'bg-slate-800 text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Desktop View"
+            >
+              <Monitor className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewport('tablet')}
+              className={`p-1.5 rounded ${viewport === 'tablet' ? 'bg-slate-800 text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Tablet View"
+            >
+              <Tablet className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewport('mobile')}
+              className={`p-1.5 rounded ${viewport === 'mobile' ? 'bg-slate-800 text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Mobile Portrait"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-slate-900" />
+
+          {/* Undo / Redo */}
+          <div className="flex items-center gap-1">
+            <button
+              disabled={historyIndex === 0}
+              onClick={handleUndo}
+              className={`p-1.5 rounded-lg border ${historyIndex === 0 ? 'border-transparent text-slate-700 cursor-not-allowed' : 'border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900'}`}
+              title="Undo Action"
+            >
+              <Undo className="w-3.5 h-3.5" />
+            </button>
+            <button
+              disabled={historyIndex === history.length - 1}
+              onClick={handleRedo}
+              className={`p-1.5 rounded-lg border ${historyIndex === history.length - 1 ? 'border-transparent text-slate-700 cursor-not-allowed' : 'border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900'}`}
+              title="Redo Action"
+            >
+              <Redo className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+        </div>
+
+        {/* Compile / Publish Button */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePublish}
+            className="px-4 py-1.5 bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-300 hover:to-purple-400 text-slate-950 rounded-lg text-xs font-semibold shadow-[0_0_12px_rgba(34,211,238,0.25)] flex items-center gap-1.5 transition-all"
+          >
+            <Upload className="w-3.5 h-3.5 stroke-[2.5px]" /> Publish App
+          </button>
+        </div>
+
+      </header>
+
+      {/* CORE WORKSPACE GRID */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* LEFT COMPONENT DRAWER PANEL */}
+        <aside className="w-80 border-r border-slate-900 bg-slate-950 flex flex-col z-20 overflow-hidden">
+          
+          {/* Block search box */}
+          <div className="p-4 border-b border-slate-900">
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <Search className="w-3.5 h-3.5" />
+              </span>
+              <input
+                type="text"
+                placeholder="Search templates & components..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-4 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 focus:outline-none focus:border-cyan-500/50 text-xs placeholder-slate-500 text-slate-200"
+              />
+            </div>
+          </div>
+
+          {/* Block categories scroller */}
+          <div className="px-2 py-2 border-b border-slate-900 flex gap-1 overflow-x-auto scrollbar-none">
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`px-3 py-1 rounded-full text-[10px] font-medium whitespace-nowrap transition-all ${
+                  activeCategory === cat.id 
+                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Draggable & Clickable presets list */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar">
+            
+            <div className="flex items-center gap-1.5 text-[10px] font-mono tracking-widest text-slate-500 uppercase pb-1">
+              <MousePointerClick className="w-3 h-3 text-cyan-500" /> Click block to insert in layout
+            </div>
+
+            {filteredPresets.length > 0 ? (
+              filteredPresets.map((preset, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => handleAddPresetBlock(preset)}
+                  className="group interactive-chip text-left p-3.5 rounded-xl border border-slate-900 hover:border-slate-800 bg-slate-900/10 hover:bg-slate-900/30 transition-all duration-300 flex items-start justify-between cursor-pointer relative overflow-hidden"
+                >
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase font-mono tracking-widest text-purple-400/80 bg-purple-500/5 px-2 py-0.5 rounded">
+                      {preset.type}
+                    </span>
+                    <h4 className="text-xs font-semibold text-slate-200 group-hover:text-cyan-400 transition-colors pt-1">
+                      {preset.name}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 leading-normal line-clamp-2 pr-4">
+                      {preset.data.title || preset.data.copyright || 'Clean functional content card.'}
+                    </p>
+                  </div>
+                  
+                  <button className="h-7 w-7 rounded-lg bg-slate-900 border border-slate-800 group-hover:border-cyan-500/30 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 hover:bg-slate-850 transition-all">
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="py-12 text-center space-y-2">
+                <span className="text-xl">🔍</span>
+                <p className="text-xs text-slate-500">No matching blocks found.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Version history widget pinned below left column */}
+          <div className="p-4 border-t border-slate-900 bg-slate-950/60 max-h-56 flex flex-col overflow-hidden">
+            <h5 className="text-[10px] font-mono tracking-widest text-slate-500 uppercase flex items-center gap-1.5 pb-2 border-b border-slate-900">
+              <History className="w-3 h-3" /> Rollback Version History
+            </h5>
+            <div className="flex-1 overflow-y-auto pt-2 space-y-2 custom-scrollbar">
+              {versionList.map((ver, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setBlocks(ver.blocks);
+                    triggerToast(`Rollback: ${ver.name}`);
+                    setMascotText(`Rolled back project files directly to "${ver.name}".`);
+                    setMascotExpression('wink');
+                  }}
+                  className="w-full text-left p-2 rounded-lg hover:bg-slate-900/40 border border-transparent hover:border-slate-850 flex items-center justify-between text-[11px] group transition-all"
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 group-hover:bg-cyan-400" />
+                    <span className="text-slate-300 truncate font-sans">{ver.name}</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-500 whitespace-nowrap pl-2">
+                    {ver.timestamp}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </aside>
+
+        {/* CENTRAL LIVE SITE CANVAS VIEWPORT */}
+        <main className="flex-1 bg-slate-900/30 flex flex-col overflow-hidden relative">
+          
+          {/* Active Canvas Frame */}
+          <div className="flex-1 overflow-y-auto p-8 flex items-start justify-center custom-scrollbar">
+            
+            <motion.div
+              layout
+              transition={{ type: 'spring', stiffness: 220, damping: 28 }}
+              style={{
+                width: viewport === 'desktop' ? '100%' : viewport === 'tablet' ? '768px' : '375px',
+                maxWidth: '100%'
+              }}
+              className="bg-slate-950 border border-slate-900/80 shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden min-h-[500px] flex flex-col relative transition-all"
+            >
+              
+              {/* Virtual iframe viewport header (only visible in mobile/tablet for aesthetic context) */}
+              {viewport !== 'desktop' && (
+                <div className="h-10 bg-slate-950 border-b border-slate-900 px-4 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/20" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500/20" />
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono select-none">zippy-delivery-pro.tridop.site</span>
+                  <div className="w-8" />
+                </div>
+              )}
+
+              {/* RENDERED BLOCKS */}
+              <div className="flex-1 flex flex-col">
+                {blocks.length > 0 ? (
+                  blocks.map((block, index) => {
+                    const isSelected = selectedBlockId === block.id;
+                    const btnClass = block.styles.roundedButtons ? 'rounded-full' : 'rounded-lg';
+                    const isBgLight = block.styles.bg.includes('bg-white') || block.styles.bg.includes('bg-slate-50') || block.styles.bg.includes('bg-slate-100') || block.styles.bg.includes('bg-amber-50') || block.styles.bg.includes('bg-gray-');
+                    const titleColorClass = isBgLight ? 'text-slate-900' : 'text-white';
+                    const subtitleColorClass = isBgLight ? 'text-slate-600' : 'text-slate-400';
+                    const borderClass = isBgLight ? 'border-slate-150' : 'border-slate-900';
+                    const innerCardClass = isBgLight ? 'bg-slate-50 border-slate-200/85 text-slate-800' : 'bg-slate-950/60 border-slate-900 text-slate-200';
+                    const inputBgClass = isBgLight ? 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400' : 'bg-slate-950 border-slate-800 text-slate-400';
+
+                    return (
+                      <div
+                        key={block.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedBlockId(block.id);
+                        }}
+                        className={`relative group cursor-pointer transition-all ${block.styles.bg} ${block.styles.text} ${
+                          isSelected ? 'ring-2 ring-cyan-500 ring-offset-2 ring-offset-slate-950 z-10' : 'hover:ring-1 hover:ring-slate-800'
+                        }`}
+                      >
+                        
+                        {/* Selected Block Controls Bar */}
+                        <div className={`absolute top-2 right-2 z-20 flex items-center gap-1 bg-slate-950/95 border border-slate-800 p-1 rounded-lg shadow-xl opacity-0 transition-opacity ${
+                          isSelected ? 'opacity-100' : 'group-hover:opacity-100'
+                        }`}>
+                          <span className="text-[9px] font-mono text-slate-400 px-1.5 uppercase tracking-wider">{block.name}</span>
+                          <div className="h-3.5 w-px bg-slate-800 mx-1" />
+                          
+                          <button
+                            disabled={index === 0}
+                            onClick={(e) => { e.stopPropagation(); handleMoveBlock(index, 'up'); }}
+                            className={`p-1 rounded ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+                            title="Move Block Up"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          
+                          <button
+                            disabled={index === blocks.length - 1}
+                            onClick={(e) => { e.stopPropagation(); handleMoveBlock(index, 'down'); }}
+                            className={`p-1 rounded ${index === blocks.length - 1 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+                            title="Move Block Down"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDuplicateBlock(index); }}
+                            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-900"
+                            title="Duplicate Block"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }}
+                            className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                            title="Delete Block"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* BLOCK RENDER ROOT */}
+                        <div className={block.styles.paddingY}>
+                          
+                          {/* 1. NAVIGATION BLOCK */}
+                          {block.type === 'navigation' && (
+                            <div className="px-6 md:px-12 flex justify-between items-center max-w-7xl mx-auto">
+                              <span className={`text-base font-extrabold tracking-tight flex items-center gap-1 ${titleColorClass}`}>
+                                {block.data.logo}
+                              </span>
+                              <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${subtitleColorClass}`}>
+                                {block.data.links?.map((lnk, idx) => (
+                                  <span key={idx} className={`hover:${titleColorClass} transition-colors cursor-pointer`}>{lnk}</span>
+                                ))}
+                              </div>
+                              {block.data.buttonText1 && (
+                                <button className={`px-4 py-1.5 text-xs font-semibold ${block.styles.accent} ${btnClass}`}>
+                                  {block.data.buttonText1}
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 2. HERO BLOCK */}
+                          {block.type === 'hero' && (
+                            <div className="px-6 md:px-12 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+                              
+                              <div className={`${block.data.placeholderImage ? 'md:col-span-7' : 'md:col-span-12 text-center'} space-y-5`}>
+                                <h1 className={`text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight ${titleColorClass}`}>
+                                  {block.data.title}
+                                </h1>
+                                <p className={`text-sm md:text-base leading-relaxed max-w-2xl mx-auto ${subtitleColorClass}`}>
+                                  {block.data.subtitle}
+                                </p>
+                                <div className={`flex items-center gap-3 ${block.data.placeholderImage ? 'justify-start' : 'justify-center'}`}>
+                                  <button className={`px-5 py-2.5 text-xs font-bold ${block.styles.accent} ${btnClass} transition-all`}>
+                                    {block.data.buttonText1}
+                                  </button>
+                                  {block.data.buttonText2 && (
+                                    <button className={`px-5 py-2.5 text-xs font-semibold border transition-all ${btnClass} ${isBgLight ? 'border-slate-200 text-slate-700 hover:bg-slate-50' : 'border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'}`}>
+                                      {block.data.buttonText2}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {block.data.placeholderImage && (
+                                <div className="md:col-span-5 flex justify-center">
+                                  <div className={`relative rounded-2xl overflow-hidden border shadow-2xl ${borderClass}`}>
+                                    <img src={block.data.placeholderImage} alt="Feature Illustration" className="w-full h-auto object-cover max-h-72" referrerPolicy="no-referrer" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/25 to-transparent" />
+                                  </div>
+                                </div>
+                              )}
+
+                            </div>
+                          )}
+
+                          {/* 3. CONTENT GRID BLOCK */}
+                          {block.type === 'content' && (
+                            <div className="px-6 md:px-12 max-w-7xl mx-auto space-y-10">
+                              <div className="text-center space-y-2">
+                                <h2 className={`text-2xl md:text-3xl font-extrabold tracking-tight ${titleColorClass}`}>{block.data.title}</h2>
+                                <p className={`text-xs md:text-sm max-w-xl mx-auto ${subtitleColorClass}`}>{block.data.subtitle}</p>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
+                                {block.data.items?.map((item, idx) => (
+                                  <div key={idx} className={`p-5 rounded-xl border space-y-3 ${innerCardClass}`}>
+                                    
+                                    {item.metric && (
+                                      <div className="text-3xl font-black font-mono text-cyan-500">{item.metric}</div>
+                                    )}
+
+                                    {!item.metric && (
+                                      <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-500 font-bold">
+                                        ⚡
+                                      </div>
+                                    )}
+
+                                    <div className="space-y-1">
+                                      <h4 className={`text-sm font-semibold ${titleColorClass}`}>{item.title}</h4>
+                                      <p className={`text-[11px] leading-relaxed ${subtitleColorClass}`}>{item.desc}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 4. MEDIA HIGHLIGHT BLOCK */}
+                          {block.type === 'media' && (
+                            <div className="px-6 md:px-12 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                              <div className={`relative rounded-2xl overflow-hidden border shadow-lg ${borderClass}`}>
+                                <img src={block.data.placeholderImage} alt="Media highlight" className="w-full h-auto object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="space-y-4">
+                                <h2 className={`text-2xl md:text-3xl font-extrabold tracking-tight leading-snug ${titleColorClass}`}>{block.data.title}</h2>
+                                <p className={`text-xs md:text-sm leading-relaxed ${subtitleColorClass}`}>{block.data.subtitle}</p>
+                                <button className={`px-5 py-2 rounded-lg text-xs font-semibold ${block.styles.accent} ${btnClass}`}>
+                                  Learn More
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 5. SOCIAL PROOF BLOCK */}
+                          {block.type === 'socialProof' && (
+                            <div className="px-6 md:px-12 max-w-7xl mx-auto space-y-8">
+                              <div className="text-center">
+                                <h3 className={`text-xl font-bold ${titleColorClass}`}>{block.data.title}</h3>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {block.data.items?.map((item, idx) => (
+                                  <div key={idx} className={`p-6 rounded-2xl border flex flex-col justify-between min-h-[140px] ${innerCardClass}`}>
+                                    <p className={`text-xs italic leading-relaxed ${subtitleColorClass}`}>"{item.desc}"</p>
+                                    <div className={`flex items-center gap-2 pt-4 border-t mt-4 ${borderClass}`}>
+                                      <div className="w-6 h-6 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[10px] text-cyan-600 font-bold">👤</div>
+                                      <span className={`text-[11px] font-semibold ${titleColorClass}`}>{item.title}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 6. FORMS / CTA SIGNUP */}
+                          {block.type === 'cta' && (
+                            <div className="px-6 md:px-12 max-w-4xl mx-auto text-center space-y-6">
+                              <h2 className={`text-2xl md:text-3xl font-extrabold tracking-tight ${titleColorClass}`}>{block.data.title}</h2>
+                              <p className={`text-xs md:text-sm max-w-xl mx-auto leading-relaxed ${subtitleColorClass}`}>{block.data.subtitle}</p>
+                              
+                              <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-2">
+                                <input
+                                  type="text"
+                                  placeholder={block.data.formPlaceholder || 'Enter your email'}
+                                  disabled
+                                  className={`flex-1 px-4 py-2 text-xs rounded-lg border focus:outline-none focus:border-cyan-500 ${inputBgClass}`}
+                                />
+                                <button className={`px-5 py-2 text-xs font-bold whitespace-nowrap ${block.styles.accent} ${btnClass}`}>
+                                  {block.data.buttonText1}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 7. FOOTER */}
+                          {block.type === 'footer' && (
+                            <div className="px-6 md:px-12 max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs">
+                              <span className={`font-extrabold ${titleColorClass}`}>{block.data.logo}</span>
+                              <p className={`text-[11px] ${subtitleColorClass}`}>{block.data.copyright}</p>
+                            </div>
+                          )}
+
+                        </div>
+
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center py-20 text-center space-y-4">
+                    <span className="text-3xl">🧩</span>
+                    <h4 className="text-base font-semibold text-slate-400">Your site canvas is empty</h4>
+                    <p className="text-xs text-slate-600 max-w-xs leading-relaxed">Click layout elements from the left presets panel to populate your application.</p>
+                  </div>
+                )}
+              </div>
+
+            </motion.div>
+
+          </div>
+
+          {/* AI PROMPT COMPILER PANEL (BOTTOM BAR) */}
+          <section className="bg-slate-950 border-t border-slate-900 p-4 z-20">
+            <div className="max-w-4xl mx-auto space-y-3">
+              
+              {/* Suggestion Chips */}
+              <div className="flex flex-wrap gap-2 justify-center">
+                <button
+                  onClick={() => { setAiPrompt("Change theme to deep dark slate"); handleApplyAiPrompt("Change theme to deep dark slate"); }}
+                  className="interactive-chip px-3 py-1 border border-slate-900 hover:border-slate-800 bg-slate-950/40 text-[10px] text-slate-400 rounded-full flex items-center gap-1"
+                >
+                  <Palette className="w-3 h-3 text-cyan-400" /> Switch to Dark Theme
+                </button>
+                <button
+                  onClick={() => { setAiPrompt("Switch styling to emerald accent theme"); handleApplyAiPrompt("Switch styling to emerald accent theme"); }}
+                  className="interactive-chip px-3 py-1 border border-slate-900 hover:border-slate-800 bg-slate-950/40 text-[10px] text-slate-400 rounded-full flex items-center gap-1"
+                >
+                  <Palette className="w-3 h-3 text-emerald-400" /> Emerald Accents
+                </button>
+                <button
+                  onClick={() => { setAiPrompt("Make hero CTA buttons rounded-full"); handleApplyAiPrompt("Make hero CTA buttons rounded-full"); }}
+                  className="interactive-chip px-3 py-1 border border-slate-900 hover:border-slate-800 bg-slate-950/40 text-[10px] text-slate-400 rounded-full flex items-center gap-1"
+                >
+                  ✨ Make buttons rounded
+                </button>
+                <button
+                  onClick={() => { setAiPrompt("Add testimonial customer reviews block"); handleApplyAiPrompt("Add testimonial customer reviews block"); }}
+                  className="interactive-chip px-3 py-1 border border-slate-900 hover:border-slate-800 bg-slate-950/40 text-[10px] text-slate-400 rounded-full flex items-center gap-1"
+                >
+                  ➕ Add Customer Reviews
+                </button>
+              </div>
+
+              {/* Prompt box */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Ask Tridop AI to edit styles, rewrite copy, change theme, or insert components..."
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleApplyAiPrompt(aiPrompt);
+                    }
+                  }}
+                  className="w-full pl-10 pr-24 py-3 rounded-xl bg-slate-900 border border-slate-800/80 text-xs placeholder-slate-500 text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                />
+                <button
+                  onClick={() => handleApplyAiPrompt(aiPrompt)}
+                  className="absolute right-1.5 top-1.5 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-semibold rounded-lg border border-slate-700/50 transition-all flex items-center gap-1"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Apply
+                </button>
+              </div>
+
+            </div>
+          </section>
+
+        </main>
+
+        {/* RIGHT COMPONENT PROPERTIES PANEL */}
+        <aside className="w-80 border-l border-slate-900 bg-slate-950 flex flex-col z-20">
+          
+          <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+            
+            <div className="p-4 border-b border-slate-900 flex justify-between items-center">
+              <h5 className="text-[10px] font-mono tracking-widest text-slate-500 uppercase flex items-center gap-1.5">
+                💼 Block Properties Inspector
+              </h5>
+            </div>
+
+            {selectedBlockId && blocks.find(b => b.id === selectedBlockId) ? (() => {
+              const active = blocks.find(b => b.id === selectedBlockId)!;
+              
+              return (
+                <div className="p-4 space-y-6">
+                  
+                  {/* Block Metadata */}
+                  <div className="p-3 bg-slate-900/40 border border-slate-900 rounded-xl space-y-1">
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/10">
+                      ID: {active.id}
+                    </span>
+                    <h4 className="text-xs font-bold text-slate-200 pt-1.5">Type: {active.name}</h4>
+                  </div>
+
+                  {/* CUSTOMIZABLE TEXT FIELDS depending on block layout type */}
+                  <div className="space-y-4">
+                    <h6 className="text-[10px] font-mono tracking-wider text-slate-500 uppercase pb-1 border-b border-slate-900/40">Customize Content</h6>
+                    
+                    {active.data.logo !== undefined && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-mono text-slate-400">Header Logo Text</label>
+                        <input
+                          type="text"
+                          value={active.data.logo}
+                          onChange={(e) => handlePropertyChange('logo', e.target.value)}
+                          onBlur={() => handlePropertyBlur('Logo Text')}
+                          className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                    )}
+
+                    {active.data.title !== undefined && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-mono text-slate-400 font-semibold">Title Headline</label>
+                        <textarea
+                          rows={3}
+                          value={active.data.title}
+                          onChange={(e) => handlePropertyChange('title', e.target.value)}
+                          onBlur={() => handlePropertyBlur('Title Headline')}
+                          className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/50 font-sans leading-relaxed"
+                        />
+                      </div>
+                    )}
+
+                    {active.data.subtitle !== undefined && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-mono text-slate-400">Subtitle Description</label>
+                        <textarea
+                          rows={3}
+                          value={active.data.subtitle}
+                          onChange={(e) => handlePropertyChange('subtitle', e.target.value)}
+                          onBlur={() => handlePropertyBlur('Subtitle Description')}
+                          className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                    )}
+
+                    {active.data.buttonText1 !== undefined && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-mono text-slate-400">Primary Button Text</label>
+                        <input
+                          type="text"
+                          value={active.data.buttonText1}
+                          onChange={(e) => handlePropertyChange('buttonText1', e.target.value)}
+                          onBlur={() => handlePropertyBlur('Primary Button')}
+                          className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                    )}
+
+                    {active.data.buttonText2 !== undefined && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-mono text-slate-400">Secondary Button Text</label>
+                        <input
+                          type="text"
+                          value={active.data.buttonText2}
+                          onChange={(e) => handlePropertyChange('buttonText2', e.target.value)}
+                          onBlur={() => handlePropertyBlur('Secondary Button')}
+                          className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                    )}
+
+                    {active.data.copyright !== undefined && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-mono text-slate-400">Copyright Text</label>
+                        <input
+                          type="text"
+                          value={active.data.copyright}
+                          onChange={(e) => handlePropertyChange('copyright', e.target.value)}
+                          onBlur={() => handlePropertyBlur('Copyright')}
+                          className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* STYLING TWEEKS */}
+                  <div className="space-y-4">
+                    <h6 className="text-[10px] font-mono tracking-wider text-slate-500 uppercase pb-1 border-b border-slate-900/40">Visual Design System</h6>
+
+                    {/* Padding Adjuster */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-mono text-slate-400 flex justify-between">
+                        <span>Background Padding</span>
+                        <span className="text-cyan-400 font-bold">{active.styles.paddingY}</span>
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {['py-6', 'py-12', 'py-16', 'py-24'].map(pad => (
+                          <button
+                            key={pad}
+                            onClick={() => handleStyleChange('paddingY', pad)}
+                            className={`py-1 rounded text-[10px] border font-mono ${active.styles.paddingY === pad ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/40' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+                          >
+                            {pad.replace('py-', '')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Background Color Presets */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-mono text-slate-400 flex justify-between">
+                        <span>Background CSS</span>
+                        <span className="text-cyan-400 truncate max-w-28 font-semibold">{active.styles.bg}</span>
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { bg: 'bg-slate-950', label: 'Slate' },
+                          { bg: 'bg-slate-900', label: 'Slate-900' },
+                          { bg: 'bg-black', label: 'Pure Black' },
+                          { bg: 'bg-indigo-950/40 border border-indigo-950/50', label: 'Indigo' }
+                        ].map(col => (
+                          <button
+                            key={col.bg}
+                            onClick={() => handleStyleChange('bg', col.bg)}
+                            className={`py-1 px-1 rounded text-[9px] truncate border ${active.styles.bg === col.bg ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/40' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+                            title={col.label}
+                          >
+                            {col.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Button rounding switcher */}
+                    <div className="flex justify-between items-center py-2 border-y border-slate-900">
+                      <span className="text-[10px] font-mono text-slate-400">Pill Rounded Buttons</span>
+                      <button
+                        onClick={() => handleStyleChange('roundedButtons', !active.styles.roundedButtons)}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-colors ${active.styles.roundedButtons ? 'bg-cyan-500' : 'bg-slate-800'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-slate-950 transition-transform ${active.styles.roundedButtons ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                  </div>
+
+                </div>
+              );
+            })() : (
+              <div className="p-12 text-center space-y-3">
+                <span className="text-2xl">⚡</span>
+                <p className="text-xs text-slate-500 leading-normal">Click any block in the canvas to customize its heading copy, spacing alignment, and button actions.</p>
+              </div>
+            )}
+
+          </div>
+
+          {/* Tri Companion embedded bottom right inside properties column */}
+          <div className="p-3 border-t border-slate-900 bg-slate-950/80">
+            <div className="p-2 bg-slate-900/30 border border-slate-900 rounded-xl">
+              <div className="relative h-44 w-full flex items-center justify-center overflow-visible">
+                <div className="scale-[0.45] origin-center absolute">
+                  <TriMascot expression={mascotExpression} speechText={mascotText} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+      </div>
+
+      {/* AI PROCESSING OVERLAY DRAWER */}
+      <AnimatePresence>
+        {aiWorking && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6"
+          >
+            <div className="max-w-md w-full space-y-6 text-center">
+              
+              <div className="flex justify-center">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-cyan-400 to-purple-500 flex items-center justify-center p-1 animate-spin shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+                  <div className="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center text-xl text-cyan-400">
+                    ⚡
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-lg font-display font-semibold text-slate-100 flex items-center justify-center gap-2">
+                  <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" /> Tridop Core Synthesizing Layout...
+                </h4>
+                <p className="text-xs text-slate-400 font-sans">Connecting to compilation compiler backend clusters</p>
+              </div>
+
+              {/* Status stream panel */}
+              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 text-left font-mono text-[10px] text-cyan-400 space-y-1.5 min-h-[140px] max-h-[140px] overflow-y-auto">
+                {aiStatusLines.map((line, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <span className="text-slate-600 select-none">&gt;</span>
+                    <span>{line}</span>
+                  </div>
+                ))}
+                <div className="w-1.5 h-3.5 bg-cyan-400 animate-pulse inline-block" />
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PUBLISHING PROGRESS & SUCCESS DIALOG MODAL */}
+      <AnimatePresence>
+        {isPublishing && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="max-w-md w-full glass-panel border-cyan-500/20 p-6 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.8)] space-y-6"
+            >
+              
+              {!publishSuccess ? (
+                <div className="space-y-5 text-center">
+                  <div className="flex justify-center">
+                    <div className="w-12 h-12 rounded-full border border-slate-800 bg-slate-900 flex items-center justify-center text-cyan-400">
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-semibold text-slate-200">Deploying Live Sandbox</h3>
+                    <p className="text-xs text-slate-500">{publishingStage}</p>
+                  </div>
+
+                  {/* Progress segment */}
+                  <div className="space-y-2">
+                    <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${publishProgress}%` }}
+                        className="h-full bg-gradient-to-r from-cyan-400 to-purple-500" 
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
+                      <span>DEPLOYMENT: {publishProgress}%</span>
+                      <span>STAGE {Math.min(5, Math.ceil(publishProgress / 20))}/5</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6 text-center">
+                  <div className="flex justify-center">
+                    <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl">
+                      ✓
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h3 className="text-xl font-display font-extrabold text-white">App Sandbox Published!</h3>
+                    <p className="text-xs text-slate-400 leading-normal max-w-sm mx-auto">Your layout and logic has been optimized, compiled, and dispatched globally on edge CDNs.</p>
+                  </div>
+
+                  {/* URL Presentation Block */}
+                  <div className="p-3 bg-slate-900 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
+                    <span className="font-mono text-slate-300 truncate pr-4">{publishedUrl}</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(publishedUrl);
+                        triggerToast("URL copied to clipboard!");
+                      }}
+                      className="text-[10px] font-mono font-bold text-cyan-400 hover:text-cyan-300"
+                    >
+                      COPY URL
+                    </button>
+                  </div>
+
+                  {/* QR code container (Vector / CSS rendering) */}
+                  <div className="flex justify-center py-2">
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-lg">
+                      {/* Styled decorative QR code grid */}
+                      <svg viewBox="0 0 100 100" className="w-24 h-24">
+                        <rect x="0" y="0" width="100" height="100" fill="white" />
+                        
+                        {/* Corners */}
+                        <rect x="5" y="5" width="25" height="25" fill="#020617" />
+                        <rect x="8" y="8" width="19" height="19" fill="white" />
+                        <rect x="11" y="11" width="13" height="13" fill="#020617" />
+
+                        <rect x="70" y="5" width="25" height="25" fill="#020617" />
+                        <rect x="73" y="8" width="19" height="19" fill="white" />
+                        <rect x="76" y="11" width="13" height="13" fill="#020617" />
+
+                        <rect x="5" y="70" width="25" height="25" fill="#020617" />
+                        <rect x="8" y="73" width="19" height="19" fill="white" />
+                        <rect x="11" y="76" width="13" height="13" fill="#020617" />
+
+                        {/* Pixel clusters */}
+                        <rect x="35" y="10" width="10" height="5" fill="#020617" />
+                        <rect x="50" y="5" width="10" height="15" fill="#020617" />
+                        <rect x="40" y="25" width="15" height="5" fill="#020617" />
+                        
+                        <rect x="5" y="35" width="15" height="10" fill="#020617" />
+                        <rect x="25" y="45" width="10" height="15" fill="#020617" />
+                        <rect x="10" y="55" width="10" height="10" fill="#020617" />
+
+                        <rect x="75" y="35" width="15" height="5" fill="#020617" />
+                        <rect x="85" y="45" width="10" height="20" fill="#020617" />
+                        <rect x="70" y="60" width="10" height="5" fill="#020617" />
+
+                        <rect x="35" y="75" width="20" height="10" fill="#020617" />
+                        <rect x="45" y="90" width="15" height="5" fill="#020617" />
+                        <rect x="60" y="70" width="5" height="15" fill="#020617" />
+                        
+                        {/* Central focus */}
+                        <rect x="45" y="45" width="10" height="10" fill="#06b6d4" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <a 
+                      href={publishedUrl} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      Launch Site <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                    <button 
+                      onClick={() => setIsPublishing(false)}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-semibold rounded-xl transition-all"
+                    >
+                      Keep Editing
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}

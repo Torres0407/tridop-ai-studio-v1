@@ -10,30 +10,30 @@ import {
 @Entity({ name: 'users', schema: 'identity' })
 export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 320 })
-  email: string;
+  email!: string;
 
   @Column({ type: 'varchar', nullable: true, select: false })
-  passwordHash: string | null;
+  passwordHash!: string | null;
 
   @Column({ type: 'varchar', default: 'user' })
-  role: string;
+  role!: string;
 
   @Column({ type: 'varchar', default: 'local' })
-  oauthProvider: string;
+  oauthProvider!: string;
 
   @Column({ type: 'varchar', nullable: true })
-  oauthId: string | null;
+  oauthId!: string | null;
 
   @Column({ type: 'boolean', default: false })
-  isSuspended: boolean;
+  isSuspended!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

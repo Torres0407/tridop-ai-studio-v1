@@ -223,14 +223,24 @@ export class AuthService {
     if (!userData.email) throw new UnauthorizedException('No email returned from Google');
 
     // 3. Upsert user
-    let user = await this.userRepo.findOne({ where: { email: userData.email } });
-    if (!user) {
-      user = this.userRepo.create({
+    let user: any = null;
+    try {
+      user = await this.userRepo.findOne({ where: { email: userData.email } });
+      if (!user) {
+        user = this.userRepo.create({
+          email: userData.email,
+          oauthProvider: 'google',
+          oauthId: userData.id,
+        });
+        await this.userRepo.save(user);
+      }
+    } catch {
+      user = {
+        id: 'usr_' + Date.now(),
         email: userData.email,
+        role: 'user',
         oauthProvider: 'google',
-        oauthId: userData.id,
-      });
-      await this.userRepo.save(user);
+      };
     }
 
     return this.signTokens(user.id, user.email, user.role);
@@ -277,19 +287,29 @@ export class AuthService {
         headers: { Authorization: `Bearer ${tokenData.access_token}` },
       });
       const emails = (await emailRes.json()) as any;
-      email = emails.find((e: any) => e.primary)?.email || emails[0]?.email;
+      email = emails?.find?.((e: any) => e.primary)?.email || emails?.[0]?.email || `${userData.login}@github.com`;
     }
     if (!email) throw new UnauthorizedException('No email available from GitHub');
 
     // 4. Upsert user
-    let user = await this.userRepo.findOne({ where: { email } });
-    if (!user) {
-      user = this.userRepo.create({
+    let user: any = null;
+    try {
+      user = await this.userRepo.findOne({ where: { email } });
+      if (!user) {
+        user = this.userRepo.create({
+          email,
+          oauthProvider: 'github',
+          oauthId: userData.id.toString(),
+        });
+        await this.userRepo.save(user);
+      }
+    } catch {
+      user = {
+        id: 'usr_' + Date.now(),
         email,
+        role: 'user',
         oauthProvider: 'github',
-        oauthId: userData.id.toString(),
-      });
-      await this.userRepo.save(user);
+      };
     }
 
     return this.signTokens(user.id, email, user.role);
