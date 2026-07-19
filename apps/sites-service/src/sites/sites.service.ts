@@ -23,7 +23,9 @@ export class SitesService {
       });
     }
 
-    const site = new this.siteModel({ ownerId, slug: `site-${Date.now()}`, ...data });
+    const crypto = require('crypto');
+    const uniqueId = crypto.randomBytes(4).toString('hex');
+    const site = new this.siteModel({ ownerId, slug: `site-${uniqueId}`, ...data });
     return site.save();
   }
 
