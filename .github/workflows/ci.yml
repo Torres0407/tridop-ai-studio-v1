@@ -8,6 +8,9 @@ jobs:
   ci:
     name: Lint · Typecheck · Tests
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
