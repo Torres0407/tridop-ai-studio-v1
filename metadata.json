@@ -1,0 +1,8 @@
+{
+  "name": "Tridop AI",
+  "description": "A premium, futuristic landing page and interactive cinematic onboarding experience for Tridop AI software builder, featuring Tri the AI mascot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
