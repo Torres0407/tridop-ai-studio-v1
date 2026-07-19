@@ -1,12 +1,15 @@
 {
   "name": "billing-service",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": ".",
+  "sourceRoot": "apps/billing-service/src",
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
       "options": {
+        "target": "node",
+        "compiler": "tsc",
         "outputPath": "dist/apps/billing-service",
         "main": "apps/billing-service/src/main.ts",
         "tsConfig": "apps/billing-service/tsconfig.app.json",
