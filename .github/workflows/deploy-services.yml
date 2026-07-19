@@ -45,7 +45,7 @@ jobs:
         run: npm ci
 
       - name: Set Nx SHAs
-        uses: nrwl/nx-set-shas@v4
+        uses: nrwl/nx-set-shas@v5
 
       # Skip service if it wasn't changed
       - name: Check if service affected
