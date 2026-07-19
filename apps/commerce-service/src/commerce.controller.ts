@@ -99,7 +99,7 @@ export class CommerceController {
 
   // --- Checkout ---
   @MessagePattern('commerce.checkout.paystack')
-  async checkoutPaystack(@Payload() data: { siteId: string; subaccountCode?: string; amount: number; email: string }) {
+  async checkoutPaystack(@Payload() data: { siteId: string; subaccountCode?: string; amount: number; email: string; items?: any[] }) {
     const secretKey = this.config.get<string>('PAYSTACK_SECRET_KEY');
     if (!secretKey) throw new Error('PAYSTACK_SECRET_KEY is not configured');
 
@@ -129,6 +129,17 @@ export class CommerceController {
     if (!result.status) {
       throw new Error(`Paystack checkout failed: ${result.message}`);
     }
+
+    // Create a pending order entity so we can track this transaction
+    const order = this.orderRepo.create({
+      id: result.data.reference, // Use Paystack's reference as our Order ID for easy webhook mapping
+      siteId: data.siteId,
+      customerEmail: data.email,
+      totalAmount: data.amount,
+      status: 'pending',
+      items: data.items || [],
+    });
+    await this.orderRepo.save(order);
 
     console.log(`[Commerce] Generated Paystack checkout URL for ${data.amount} (Split: ${data.subaccountCode || 'No'})`);
     return { url: result.data.authorization_url, reference: result.data.reference };

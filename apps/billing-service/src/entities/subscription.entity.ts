@@ -50,6 +50,14 @@ export class SubscriptionEntity {
   @Column({ default: false })
   cancelAtPeriodEnd: boolean;
 
+  /** AI generation credits available per billing cycle. Set by plan. */
+  @Column({ type: 'int', default: 50 })
+  creditsLimit: number;
+
+  /** AI credits consumed in the current billing cycle. */
+  @Column({ type: 'int', default: 0 })
+  creditsUsed: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -12,6 +12,7 @@ import { InjectAnalytics } from './engine/injectAnalytics';
 import { BuildWorker } from './jobs/buildWorker';
 import { DomainRegisteredConsumer } from './events/domainRegistered.consumer';
 import { LiveSiteEntity } from './entities/liveSite.entity';
+import { DeployHistoryEntity } from './entities/deployHistory.entity';
 
 @Module({
   imports: [
@@ -22,12 +23,12 @@ import { LiveSiteEntity } from './entities/liveSite.entity';
         type: 'postgres',
         url: config.get<string>('DEPLOY_POSTGRES_URL', 'postgres://tridopai:tridopai@localhost:5432/tridopai'),
         schema: 'deploy',
-        entities: [LiveSiteEntity],
+        entities: [LiveSiteEntity, DeployHistoryEntity],
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([LiveSiteEntity]),
+    TypeOrmModule.forFeature([LiveSiteEntity, DeployHistoryEntity]),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
