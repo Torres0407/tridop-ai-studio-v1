@@ -20,6 +20,8 @@ import {
   SignupPayload,
   LoginPayload,
   RefreshPayload,
+  ForgotPasswordPayload,
+  ResetPasswordPayload,
 } from '@libs/clients';
 import { CurrentUser, Public } from '@libs/common';
 import { JwtPayload, BUSINESS_CATEGORIES } from '@libs/types';
@@ -53,8 +55,22 @@ export class AuthProxy {
   @Delete('logout')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Invalidate all sessions for the current user' })
-  logout(@Req() req: Request & { user: JwtPayload }) {
-    return this.identity.logout(req.user.sub);
+  logout(@Req() req: Request & { user: JwtPayload }, @Body() body: { refreshToken?: string }) {
+    return this.identity.logout(req.user.sub, body?.refreshToken);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request a password reset email' })
+  forgotPassword(@Body() dto: ForgotPasswordPayload) {
+    return this.identity.forgotPassword(dto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password using the token from the email link' })
+  resetPassword(@Body() dto: ResetPasswordPayload) {
+    return this.identity.resetPassword(dto);
   }
 }
 

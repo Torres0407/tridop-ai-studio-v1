@@ -3,6 +3,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Request } from 'express';
 import { CommerceClient } from '@libs/clients';
 import { SiteOwnershipGuard } from '@libs/common';
+import { CreateProductDto, CreateBookingDto } from '../dto/commerce.dto';
 
 @ApiTags('Commerce')
 @ApiBearerAuth()
@@ -13,7 +14,7 @@ export class CommerceProxy {
 
   @Post('products')
   @ApiOperation({ summary: 'Create a product' })
-  async createProduct(@Body() data: any) {
+  async createProduct(@Body() data: CreateProductDto) {
     return this.commerceClient.createProduct(data);
   }
 
@@ -25,7 +26,7 @@ export class CommerceProxy {
 
   @Post('bookings')
   @ApiOperation({ summary: 'Create a booking' })
-  async createBooking(@Body() data: any) {
+  async createBooking(@Body() data: CreateBookingDto) {
     return this.commerceClient.createBooking(data);
   }
 
