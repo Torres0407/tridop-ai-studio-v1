@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN npm ci --ignore-scripts
 RUN npx nx build identity-service --prod
 
 # ─── Runtime image ────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 WORKDIR /app
 
