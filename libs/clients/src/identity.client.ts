@@ -12,6 +12,8 @@ export interface RefreshPayload { refreshToken: string }
 export interface OAuthPayload { code: string; redirectUri: string }
 export interface UpdateUserPayload { id: string; [key: string]: unknown }
 export interface UpsertBusinessProfilePayload { userId: string; [key: string]: unknown }
+export interface ForgotPasswordPayload { email: string }
+export interface ResetPasswordPayload { token: string; newPassword: string }
 
 export const IDENTITY_CLIENT = 'IDENTITY_SERVICE';
 
@@ -33,8 +35,8 @@ export class IdentityClient extends BaseServiceClient {
     return this.send('auth.refresh', payload as unknown as Record<string, unknown>);
   }
 
-  logout(userId: string): Promise<void> {
-    return this.send('auth.logout', { userId });
+  logout(userId: string, refreshToken?: string): Promise<void> {
+    return this.send('auth.logout', { userId, refreshToken });
   }
 
   oauthGoogle(payload: OAuthPayload): Promise<AuthTokens> {
@@ -79,5 +81,13 @@ export class IdentityClient extends BaseServiceClient {
 
   listUsers(payload: { limit?: number; offset?: number }): Promise<any> {
     return this.send('users.list', payload);
+  }
+
+  forgotPassword(payload: ForgotPasswordPayload): Promise<{ message: string }> {
+    return this.send('auth.forgotPassword', payload as unknown as Record<string, unknown>);
+  }
+
+  resetPassword(payload: ResetPasswordPayload): Promise<{ message: string }> {
+    return this.send('auth.resetPassword', payload as unknown as Record<string, unknown>);
   }
 }
