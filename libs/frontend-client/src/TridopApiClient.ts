@@ -222,6 +222,15 @@ export class TridopApiClient {
   }
 
   // ==========================================
+  // Categories Module
+  // ==========================================
+  public categories = {
+    list: (): Promise<any[]> => {
+      return this.request<any[]>('/categories');
+    },
+  };
+
+  // ==========================================
   // Auth Module
   // ==========================================
   public auth = {

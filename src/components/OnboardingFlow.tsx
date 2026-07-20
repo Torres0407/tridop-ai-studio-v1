@@ -59,13 +59,40 @@ export default function OnboardingFlow({
   onFieldFocus,
   onAuthSuccess,
 }: OnboardingFlowProps) {
-  // Examples for Step 1
-  const promptExamples: PromptExample[] = [
+  // Examples for Step 1 — populated from backend GET /categories API
+  const [promptExamples, setPromptExamples] = useState<PromptExample[]>([
     { id: '1', text: 'Food Delivery App', category: 'Mobile & Web App' },
     { id: '2', text: 'Marketplace with Payments', category: 'E-Commerce' },
     { id: '3', text: 'SaaS Analytics Dashboard', category: 'Business Tool' },
     { id: '4', text: '3D Portfolio Website', category: 'Creative Web' },
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        let backendCategories: any[] = [];
+        if (client && (client as any).categories && typeof (client as any).categories.list === 'function') {
+          backendCategories = await (client as any).categories.list();
+        } else {
+          const res = await fetch('http://localhost:4000/categories');
+          if (res.ok) {
+            backendCategories = await res.json();
+          }
+        }
+        if (Array.isArray(backendCategories) && backendCategories.length > 0) {
+          const mapped: PromptExample[] = backendCategories.slice(0, 6).map((cat: any, idx: number) => ({
+            id: cat.id || String(idx + 1),
+            text: cat.name || cat.title || 'Custom Web Application',
+            category: cat.type || cat.group || 'Template',
+          }));
+          setPromptExamples(mapped);
+        }
+      } catch {
+        // Safe fallback
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Planning checklist for Step 2
   const [planningItems, setPlanningItems] = useState<PlanningItem[]>([
@@ -799,7 +826,7 @@ export default function OnboardingFlow({
 
   return (
     <div className="w-full h-full flex flex-col justify-center items-center relative px-6 md:px-12 z-10">
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout">
         
         {/* STEP 1: Prompt Input Selection */}
         {currentStep === 1 && (

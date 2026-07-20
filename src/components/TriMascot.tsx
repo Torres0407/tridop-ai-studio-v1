@@ -5,9 +5,10 @@ import { TriExpression } from '../types';
 interface TriMascotProps {
   expression?: TriExpression;
   speechText?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function TriMascot({ expression = 'idle', speechText }: TriMascotProps) {
+export default function TriMascot({ expression = 'idle', speechText, size = 'md' }: TriMascotProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [isBlinking, setIsBlinking] = useState(false);
@@ -73,28 +74,60 @@ export default function TriMascot({ expression = 'idle', speechText }: TriMascot
     return () => clearInterval(blinkInterval);
   }, []);
 
-  // Decide if Tri is actively waving (disabled by request)
-  const isWaving = false;
+  // Hover tracking with 10-second wave trigger
+  const [isHovered, setIsHovered] = useState(false);
+  const [isWaving, setIsWaving] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    // After 10 seconds of continuous hover, activate waving animation
+    hoverTimerRef.current = setTimeout(() => {
+      setIsWaving(true);
+    }, 10000);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setIsWaving(false);
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
 
   // Expression helper states for cross-fading
   const isBlinkActive = isBlinking;
   const isPointingActive = !isBlinking && expression === 'pointing';
-  const isExcitedActive = !isBlinking && expression === 'excited';
+  const isExcitedActive = !isBlinking && (expression === 'excited' || isWaving);
   const isWinkActive = !isBlinking && expression === 'wink';
   const isThinkingActive = !isBlinking && expression === 'thinking';
   const isTalkingActive = !isBlinking && expression === 'talking';
   const isIdleActive = !isBlinking && !isExcitedActive && !isWinkActive && !isThinkingActive && !isTalkingActive && !isPointingActive;
 
+  const currentSpeechText = isWaving 
+    ? (speechText ? `${speechText} 👋` : 'Hello friend! 👋 Thanks for hanging out!') 
+    : speechText;
+
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col items-center justify-center p-4 select-none"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="relative flex flex-col items-center justify-center p-4 select-none cursor-pointer"
     >
       {/* Dynamic Floating Speech Bubble */}
-      {speechText && (
+      {currentSpeechText && (
         <div className="absolute -top-16 bg-slate-950/90 border border-cyan-500/35 text-cyan-200 px-4.5 py-3 rounded-2xl text-sm max-w-xs shadow-[0_0_30px_rgba(34,211,238,0.18)] backdrop-blur-md animate-fade-in text-center z-10 font-sans font-medium">
           <div className="relative">
-            {speechText}
+            {currentSpeechText}
             {/* Triangular pointer directed down at Tri */}
             <div className="absolute -bottom-[13px] left-1/2 -translate-x-1/2 w-0 h-0 border-8 border-transparent border-t-slate-950/90" />
             <div className="absolute -bottom-[15px] left-1/2 -translate-x-1/2 w-0 h-0 border-8 border-transparent border-t-cyan-500/35 -z-10" />
@@ -112,7 +145,13 @@ export default function TriMascot({ expression = 'idle', speechText }: TriMascot
       >
         {/* Inner floating mascot structure */}
         <div
-          className="relative w-[380px] h-[450px] md:w-[460px] md:h-[540px] flex items-center justify-center select-none"
+          className={`relative flex items-center justify-center select-none ${
+            size === 'sm'
+              ? 'w-[180px] h-[220px]'
+              : size === 'md'
+              ? 'w-[260px] h-[310px]'
+              : 'w-[380px] h-[450px] md:w-[460px] md:h-[540px]'
+          }`}
           style={{
             animation: 'tri-float 6s ease-in-out infinite',
           }}
@@ -153,7 +192,13 @@ export default function TriMascot({ expression = 'idle', speechText }: TriMascot
         {/* High-fidelity Vector Robot SVG Chassis */}
         <svg
           viewBox="0 0 110 135"
-          className="w-[340px] h-[410px] md:w-[420px] md:h-[500px] drop-shadow-[0_15px_40px_rgba(3,0,20,0.85)] filter"
+          className={`drop-shadow-[0_15px_40px_rgba(3,0,20,0.85)] filter ${
+            size === 'sm'
+              ? 'w-[160px] h-[200px]'
+              : size === 'md'
+              ? 'w-[230px] h-[280px]'
+              : 'w-[340px] h-[410px] md:w-[420px] md:h-[500px]'
+          }`}
         >
           {/* Floor ground shadow for immersive 3D depth */}
           <ellipse cx="55" cy="126" rx="22" ry="4" fill="rgba(0,0,0,0.55)" />

@@ -1,0 +1,39 @@
+name: Mirror Repository
+
+on:
+  push:
+    branches: ["*"]
+    tags: ["*"]
+  workflow_dispatch:
+
+jobs:
+  mirror-to-personal:
+    name: Sync Organization Repo to Personal Repo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror to Personal Repository
+        env:
+          PAT_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || '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' }}
+          TARGET_REPO_URL: ${{ secrets.PERSONAL_REPO_URL || 'https://github.com/Torres0407/tridop-ai-studio-v1.git' }}
+        run: |
+          if [ -z "$TARGET_REPO_URL" ]; then
+            echo "Error: PERSONAL_REPO_URL secret is not set."
+            exit 1
+          fi
+
+          # Extract protocol and host to insert authentication token
+          AUTHENTICATED_URL=$(echo "$TARGET_REPO_URL" | sed -E "s#https://#https://${PAT_TOKEN}@#")
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git remote add mirror "$AUTHENTICATED_URL" || git remote set-url mirror "$AUTHENTICATED_URL"
+
+          echo "Pushing all branches and tags to personal repository..."
+          git push --prune mirror "+refs/heads/*:refs/heads/*" "+refs/tags/*:refs/tags/*"

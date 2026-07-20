@@ -50,6 +50,8 @@ import { SeoProxy } from './proxy/seo.proxy';
 const REDIS_OPTIONS = {
   host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
   port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
+  retryStrategy: () => 1000,
+  enableOfflineQueue: false,
 };
 
 @Module({

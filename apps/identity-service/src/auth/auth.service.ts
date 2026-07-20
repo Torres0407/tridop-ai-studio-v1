@@ -247,8 +247,13 @@ export class AuthService {
   }
 
   async oauthGithub(code: string, redirectUri: string): Promise<AuthTokens> {
-    const clientId = this.configService.get<string>('GITHUB_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('GITHUB_CLIENT_SECRET');
+    let clientId = this.configService.get<string>('GITHUB_CLIENT_ID', 'Ov23liWDbHUiWYfFpA4i');
+    let clientSecret = this.configService.get<string>('GITHUB_CLIENT_SECRET', 'ed6f688e92eb971647a274c9b65e64e75a4cb000');
+
+    if (redirectUri && redirectUri.includes('3000')) {
+      clientId = this.configService.get<string>('GITHUB_CLIENT_ID_3000', 'Ov23lio7tWcWlTeMsb7K');
+      clientSecret = this.configService.get<string>('GITHUB_CLIENT_SECRET_3000', '3dcc06ba4311afd18f0cd0ae13b3db8432dd1be3');
+    }
     if (!clientId || !clientSecret) throw new Error('GitHub OAuth credentials missing');
 
     // 1. Exchange code for token

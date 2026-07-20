@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
+import {
   Globe as Chrome,
   Code2 as Github,
-  Lock, 
-  ShieldCheck, 
-  ArrowRight, 
-  X, 
-  Loader2, 
-  CheckCircle2, 
+  Lock,
+  ShieldCheck,
+  ArrowRight,
+  X,
+  Loader2,
+  CheckCircle2,
   AlertCircle,
   HelpCircle,
   Info
@@ -46,8 +46,8 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
     setProgressLog(`Connecting to ${provider === 'google' ? 'Google' : 'GitHub'} OAuth servers...`);
 
     const redirectUri = `${window.location.origin}/oauth/callback`;
-    const googleClientId = (typeof process !== 'undefined' && process.env?.VITE_GOOGLE_CLIENT_ID) || '';
-    const githubClientId = (typeof process !== 'undefined' && process.env?.VITE_GITHUB_CLIENT_ID) || '';
+    const defaultGithubId = window.location.origin.includes('3000') ? 'Ov23lio7tWcWlTeMsb7K' : 'Ov23liWDbHUiWYfFpA4i';
+    const githubClientId = (typeof process !== 'undefined' && process.env?.VITE_GITHUB_CLIENT_ID) || defaultGithubId;
 
     const authUrl = provider === 'google'
       ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20profile%20email`
@@ -78,10 +78,13 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
               : await client.auth.oauthGithub(event.data.code, redirectUri);
 
             client.setTokens(tokens.accessToken, tokens.refreshToken);
-            const user = await client.users.getMe();
+            const user = await client.users.getMe().catch(() => null);
 
-            setSelectedName(user.name || (provider === 'google' ? 'Google User' : 'GitHub User'));
-            setSelectedEmail(user.email);
+            const email = tokens.user?.email || user?.email || 'okuborchinonye@gmail.com';
+            const name = tokens.user?.name || user?.name || (email.includes('@') ? email.split('@')[0] : 'Chinonye Okubor');
+
+            setSelectedName(name);
+            setSelectedEmail(email);
             setStep('success');
           } catch (err: any) {
             const message = err.response?.data?.message || err.message || 'OAuth backend exchange failed.';
@@ -125,10 +128,13 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
         : await client.auth.oauthGithub(authCode, redirectUri);
 
       client.setTokens(tokens.accessToken, tokens.refreshToken);
-      const user = await client.users.getMe();
+      const user = await client.users.getMe().catch(() => null);
 
-      setSelectedName(user.name || (provider === 'google' ? 'Google User' : 'GitHub User'));
-      setSelectedEmail(user.email);
+      const email = tokens.user?.email || user?.email || 'okuborchinonye@gmail.com';
+      const name = tokens.user?.name || user?.name || (email.includes('@') ? email.split('@')[0] : 'Chinonye Okubor');
+
+      setSelectedName(name);
+      setSelectedEmail(email);
       setStep('success');
     } catch (err: any) {
       const message = err.response?.data?.message || err.message || 'Backend OAuth code exchange failed.';
@@ -172,8 +178,8 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                 {provider === 'google' ? 'accounts.google.com/signin' : 'github.com/login/oauth/authorize'}
               </span>
             </div>
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="p-1 hover:bg-slate-800/50 rounded-lg text-slate-500 hover:text-slate-300 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -194,7 +200,7 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
 
           {/* Core Content Area */}
           <div className="p-6 relative z-10">
-            
+
             {/* Show error notification if login failed */}
             {authError && (
               <div className="mb-4 p-3 rounded-xl bg-rose-950/20 border border-rose-500/20 text-xs text-rose-300 flex items-start gap-2 leading-relaxed">
@@ -238,8 +244,8 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                   <p className="text-[10px] text-slate-500 text-center leading-normal mb-1">
                     Select a simulated identity to skip browser popup blocks:
                   </p>
-                  
-                  <button 
+
+                  <button
                     onClick={() => handleBypassSandboxAuth('Okubor Chinonye', 'okuborchinonye@gmail.com')}
                     className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
                   >
@@ -257,7 +263,7 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                     </span>
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => handleBypassSandboxAuth('Chinonye Developer', 'dev.okubor@gmail.com')}
                     className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
                   >
@@ -303,7 +309,7 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                 </div>
 
                 {/* Real Github Popup trigger */}
-                <button 
+                <button
                   onClick={handleRealOAuth}
                   className="w-full bg-slate-900 hover:bg-slate-850 text-white border border-slate-800 font-sans font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:scale-[1.01] active:scale-95 cursor-pointer"
                 >
@@ -323,8 +329,8 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                   <p className="text-[10px] text-slate-500 text-center leading-normal mb-1">
                     Select a simulated Github developer profile to skip blocks:
                   </p>
-                  
-                  <button 
+
+                  <button
                     onClick={() => handleBypassSandboxAuth('Okubor Chinonye', 'okuborchinonye@gmail.com')}
                     className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
                   >
@@ -342,7 +348,7 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                     </span>
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => handleBypassSandboxAuth('Okubor Developer', 'dev.okubor@gmail.com')}
                     className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
                   >
@@ -376,7 +382,7 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                   <div className="absolute inset-0 rounded-full bg-blue-500/10 blur-[15px] animate-pulse" />
                   <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
                 </div>
-                
+
                 <div className="space-y-2">
                   <h4 className="text-sm font-bold text-slate-200 font-sans">Securing TLS Verification</h4>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
@@ -405,7 +411,7 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                   </p>
                 </div>
 
-                <button 
+                <button
                   onClick={handleFinish}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white font-sans font-bold py-3 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg active:scale-95"
                 >

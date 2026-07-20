@@ -66,7 +66,7 @@ export default function SignupPage() {
             type="button"
             onClick={async () => {
               const redirectUri = `${window.location.origin}/oauth/callback`;
-              const googleClientId = (typeof process !== 'undefined' && process.env?.VITE_GOOGLE_CLIENT_ID) || '';
+              const googleClientId = (typeof process !== 'undefined' && process.env?.VITE_GOOGLE_CLIENT_ID) || '295432336535-r29hlb454nf0pgtksr1hb07h1vcu0qp1.apps.googleusercontent.com';
               const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20profile%20email`;
               window.open(authUrl, 'google_oauth_popup', 'width=550,height=650');
             }}
@@ -78,7 +78,8 @@ export default function SignupPage() {
             type="button"
             onClick={async () => {
               const redirectUri = `${window.location.origin}/oauth/callback`;
-              const githubClientId = (typeof process !== 'undefined' && process.env?.VITE_GITHUB_CLIENT_ID) || '';
+              const defaultGithubId = window.location.origin.includes('3000') ? 'Ov23lio7tWcWlTeMsb7K' : 'Ov23liWDbHUiWYfFpA4i';
+              const githubClientId = (typeof process !== 'undefined' && process.env?.VITE_GITHUB_CLIENT_ID) || defaultGithubId;
               const authUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(githubClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
               window.open(authUrl, 'github_oauth_popup', 'width=550,height=650');
             }}

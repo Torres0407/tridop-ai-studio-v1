@@ -57,4 +57,4 @@ import { EVENT_NAMES } from '@libs/common';
   ],
   providers: [AuthService, UsersService, BusinessProfileService],
 })
-export class AppModule {}
+export class AppModule { }
