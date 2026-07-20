@@ -9,7 +9,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/analytics-service ./apps/analytics-service
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
 RUN npx nx build analytics-service --prod
 
 FROM node:20-alpine AS runtime
