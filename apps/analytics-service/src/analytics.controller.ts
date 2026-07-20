@@ -24,8 +24,8 @@ export class AnalyticsController {
     // e.g. GET https://app.posthog.com/api/projects/:id/insights/trend
     return {
       siteId: data.siteId,
-      pageviews: events?.length || 0,
-      uniqueVisitors: new Set(events?.map(e => e.distinct_id)).size || 0,
+      pageviews: events.pageviews || 0,
+      uniqueVisitors: events.uniques || 0,
       bounceRate: 42.5, // Calculated placeholder
     };
   }
