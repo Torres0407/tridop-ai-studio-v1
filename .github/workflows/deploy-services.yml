@@ -5,18 +5,16 @@ on:
     branches: [main]
 
 jobs:
-  build-and-deploy:
-    name: Build · Push · Migrate · Deploy · Health Check
+  build-and-push:
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
     strategy:
-      # Deploy services sequentially so health checks catch issues before
-      # dependent services are deployed
       max-parallel: 1
       matrix:
         service:
           - identity-service
           - api-gateway
-          # Phase 4 services added here as they are built:
+          # Uncomment as services are production-ready:
           # - sites-service
           # - ai-service
           # - deploy-service
@@ -31,85 +29,57 @@ jobs:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Set Nx SHAs
-        uses: nrwl/nx-set-shas@v4
-
-      # Skip service if it wasn't changed
-      - name: Check if service affected
-        id: affected
-        run: |
-          AFFECTED=$(npx nx show projects --affected --base=${{ env.NX_BASE }} --head=${{ env.NX_HEAD }})
-          echo "affected=$AFFECTED" >> $GITHUB_OUTPUT
-          if echo "$AFFECTED" | grep -q "${{ matrix.service }}"; then
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_deploy=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Log in to GHCR
-        if: steps.affected.outputs.should_deploy == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push Docker image
-        if: steps.affected.outputs.should_deploy == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: apps/${{ matrix.service }}/Dockerfile
           push: true
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/tridopai-${{ matrix.service }}:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/tridopai-${{ matrix.service }}:latest
 
-      - name: Run database migrations
-        if: steps.affected.outputs.should_deploy == 'true'
-        run: |
-          npx nx run ${{ matrix.service }}:migration:run
-        env:
-          DATABASE_URL: ${{ secrets[format('{0}_DATABASE_URL', matrix.service)] }}
-
       - name: Deploy service
-        if: steps.affected.outputs.should_deploy == 'true'
-        # Replace with your deployment mechanism (Fly.io, Railway, ECS, etc.)
         run: |
           echo "Deploying ${{ matrix.service }}:${{ github.sha }}"
           # e.g.: flyctl deploy --image ghcr.io/... --app tridopai-${{ matrix.service }}
 
       - name: Health check
-        if: steps.affected.outputs.should_deploy == 'true'
         run: |
           SERVICE_URL=${{ secrets[format('{0}_HEALTH_URL', matrix.service)] }}
+          if [ -z "$SERVICE_URL" ]; then
+            echo "No health URL configured for ${{ matrix.service }}, skipping."
+            exit 0
+          fi
           for i in {1..12}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$SERVICE_URL/health")
             if [ "$STATUS" = "200" ]; then
               echo "Health check passed"
               exit 0
             fi
-            echo "Health check attempt $i failed (status $STATUS), retrying in 10s..."
+            echo "Attempt $i failed (status $STATUS), retrying in 10s..."
             sleep 10
           done
-          echo "Health check failed after 12 attempts — triggering rollback"
+          echo "Health check failed after 12 attempts"
           exit 1
 
-      - name: Rollback on health check failure
-        if: failure() && steps.affected.outputs.should_deploy == 'true'
+      - name: Rollback on failure
+        if: failure()
         run: |
           echo "Rolling back ${{ matrix.service }} to previous image..."
           # e.g.: flyctl deploy --image ghcr.io/...:<previous-sha> --app tridopai-${{ matrix.service }}
