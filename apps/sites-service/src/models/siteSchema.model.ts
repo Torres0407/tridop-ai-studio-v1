@@ -4,25 +4,25 @@ import { Document } from 'mongoose';
 @Schema({ timestamps: true, collection: 'site_schemas' })
 export class SiteSchemaModel extends Document {
   @Prop({ required: true })
-  siteId: string;
+  siteId!: string;
 
   @Prop({ required: true })
-  ownerId: string;
+  ownerId!: string;
 
   @Prop({ required: true, unique: true })
-  slug: string;
+  slug!: string;
 
   @Prop({ default: 'Draft' })
-  status: string;
+  status!: string;
 
   @Prop({ type: Array, default: [] })
-  blocks: any[];
+  blocks!: any[];
 
   @Prop({ type: Array, default: [] })
-  pages: any[];
+  pages!: any[];
 
   @Prop({ type: Object, default: {} })
-  globalSettings: Record<string, any>;
+  globalSettings!: Record<string, any>;
 }
 
 export const SiteSchemaSchema = SchemaFactory.createForClass(SiteSchemaModel);

@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": "../../",
     "module": "commonjs",
     "outDir": "../../dist/apps/billing-service",
     "declaration": false,

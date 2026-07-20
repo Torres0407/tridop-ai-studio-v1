@@ -5,8 +5,12 @@
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
       "options": {
+        "webpackConfig": "webpack.config.js",
+        "target": "node",
+        "compiler": "tsc",
         "outputPath": "dist/apps/commerce-service",
         "main": "apps/commerce-service/src/main.ts",
         "tsConfig": "apps/commerce-service/tsconfig.app.json",

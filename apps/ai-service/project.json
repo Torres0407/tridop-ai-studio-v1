@@ -5,8 +5,12 @@
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
       "options": {
+        "webpackConfig": "webpack.config.js",
+        "target": "node",
+        "compiler": "tsc",
         "outputPath": "dist/apps/ai-service",
         "main": "apps/ai-service/src/main.ts",
         "tsConfig": "apps/ai-service/tsconfig.app.json",

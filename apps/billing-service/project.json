@@ -5,8 +5,12 @@
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
       "options": {
+        "webpackConfig": "webpack.config.js",
+        "target": "node",
+        "compiler": "tsc",
         "outputPath": "dist/apps/billing-service",
         "main": "apps/billing-service/src/main.ts",
         "tsConfig": "apps/billing-service/tsconfig.app.json",
