@@ -18,7 +18,7 @@ export class IdempotencyGuard {
       const record = this.repo.create({ id: crypto.randomUUID(), provider, eventId });
       await this.repo.save(record);
       return false; // Not processed yet
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === '23505') return true; // Unique constraint violation (race condition safe)
       throw e;
     }
