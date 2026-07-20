@@ -33,7 +33,7 @@ export class WhatsappService {
       }),
     });
 
-    const data = await res.json();
+    const data = (await res.json()) as any;
     if (!res.ok) {
       this.logger.error(`WhatsApp API error: ${JSON.stringify(data)}`);
       throw new Error(`WhatsApp send failed: ${data.error?.message || res.statusText}`);
