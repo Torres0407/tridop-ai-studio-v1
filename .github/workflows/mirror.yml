@@ -19,11 +19,11 @@ jobs:
 
       - name: Mirror to Personal Repository
         env:
-          PAT_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || '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' }}
-          TARGET_REPO_URL: ${{ secrets.PERSONAL_REPO_URL || 'https://github.com/Torres0407/tridop-ai-studio-v1.git' }}
+          PAT_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          TARGET_REPO_URL: ${{ secrets.PERSONAL_REPO_URL }}
         run: |
-          if [ -z "$TARGET_REPO_URL" ]; then
-            echo "Error: PERSONAL_REPO_URL secret is not set."
+          if [ -z "$TARGET_REPO_URL" ] || [ -z "$PAT_TOKEN" ]; then
+            echo "Error: PERSONAL_REPO_URL or PERSONAL_ACCESS_TOKEN secret is not set."
             exit 1
           fi
 
