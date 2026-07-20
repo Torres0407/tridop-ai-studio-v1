@@ -13,7 +13,7 @@ COPY libs/types   ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/api-gateway ./apps/api-gateway
 
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
 RUN npx nx build api-gateway --prod
 
 FROM node:20-alpine AS runtime
