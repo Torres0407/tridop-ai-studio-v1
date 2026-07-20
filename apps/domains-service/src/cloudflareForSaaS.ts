@@ -34,7 +34,7 @@ export class CloudflareForSaaS {
       }),
     });
 
-    const data = await res.json();
+    const data = (await res.json()) as any;
     if (!data.success) {
       this.logger.error(`Cloudflare API error: ${JSON.stringify(data.errors)}`);
       throw new Error(`Cloudflare provisioning failed: ${data.errors[0]?.message}`);

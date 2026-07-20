@@ -29,7 +29,7 @@ export class DynadotRegistrar {
       method: 'GET',
     });
 
-    const data = await res.json();
+    const data = (await res.json()) as any;
     if (data.RegisterResponse?.ResponseCode !== '0') {
       this.logger.error(`Dynadot API error: ${JSON.stringify(data)}`);
       throw new Error(`Dynadot registration failed: ${data.RegisterResponse?.Status || 'Unknown Error'}`);
