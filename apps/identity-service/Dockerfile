@@ -15,7 +15,7 @@ COPY libs/types   ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/identity-service ./apps/identity-service
 
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
 RUN npx nx build identity-service --prod
 
 # ─── Runtime image ────────────────────────────────────────────────────────────
