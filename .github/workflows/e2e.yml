@@ -20,9 +20,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          npm install --package-lock-only --ignore-scripts --legacy-peer-deps --no-audit
-          npm ci --ignore-scripts --legacy-peer-deps --no-audit
+        run: npm install --ignore-scripts --legacy-peer-deps --no-audit
 
       - name: Free up disk space
         run: |

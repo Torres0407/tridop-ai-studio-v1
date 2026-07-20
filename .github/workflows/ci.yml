@@ -24,9 +24,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          npm install --package-lock-only --ignore-scripts --legacy-peer-deps --no-audit
-          npm ci --ignore-scripts --legacy-peer-deps --no-audit
+        run: npm install --ignore-scripts --legacy-peer-deps --no-audit
 
       - name: Set Nx SHAs (for affected computation)
         uses: nrwl/nx-set-shas@v4
