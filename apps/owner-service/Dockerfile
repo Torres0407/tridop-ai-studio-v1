@@ -9,7 +9,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/owner-service ./apps/owner-service
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
 RUN npx nx build owner-service --prod
 
 FROM node:20-alpine AS runtime
