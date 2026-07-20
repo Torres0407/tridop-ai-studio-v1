@@ -14,7 +14,7 @@
         "outputPath": "dist/apps/identity-service",
         "main": "apps/identity-service/src/main.ts",
         "tsConfig": "apps/identity-service/tsconfig.app.json",
-        "assets": ["apps/identity-service/src/assets"]
+        "assets": []
       }
     },
     "typecheck": {
