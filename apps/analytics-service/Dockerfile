@@ -12,7 +12,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/analytics-service ./apps/analytics-service
-RUN npx nx build analytics-service --prod
+RUN NX_DAEMON=false npx nx build analytics-service --prod
 
 FROM node:20-alpine AS runtime
 WORKDIR /app

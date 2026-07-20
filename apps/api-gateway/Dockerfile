@@ -16,7 +16,7 @@ COPY libs/types   ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/api-gateway ./apps/api-gateway
 
-RUN npx nx build api-gateway --prod
+RUN NX_DAEMON=false npx nx build api-gateway --prod
 
 FROM node:20-alpine AS runtime
 

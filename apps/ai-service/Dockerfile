@@ -12,7 +12,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/ai-service ./apps/ai-service
-RUN npx nx build ai-service --prod
+RUN NX_DAEMON=false npx nx build ai-service --prod
 
 FROM node:20-alpine AS runtime
 WORKDIR /app

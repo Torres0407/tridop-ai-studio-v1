@@ -18,7 +18,7 @@ COPY libs/types   ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/identity-service ./apps/identity-service
 
-RUN npx nx build identity-service --prod
+RUN NX_DAEMON=false npx nx build identity-service --prod
 
 # ─── Runtime image ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime

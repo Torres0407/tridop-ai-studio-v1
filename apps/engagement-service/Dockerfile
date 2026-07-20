@@ -12,7 +12,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/engagement-service ./apps/engagement-service
-RUN npx nx build engagement-service --prod
+RUN NX_DAEMON=false npx nx build engagement-service --prod
 
 FROM node:20-alpine AS runtime
 WORKDIR /app

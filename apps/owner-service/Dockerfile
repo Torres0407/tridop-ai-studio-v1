@@ -12,7 +12,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/owner-service ./apps/owner-service
-RUN npx nx build owner-service --prod
+RUN NX_DAEMON=false npx nx build owner-service --prod
 
 FROM node:20-alpine AS runtime
 WORKDIR /app

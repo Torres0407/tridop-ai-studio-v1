@@ -12,7 +12,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/deploy-service ./apps/deploy-service
-RUN npx nx build deploy-service --prod
+RUN NX_DAEMON=false npx nx build deploy-service --prod
 
 FROM node:20-alpine AS runtime
 WORKDIR /app

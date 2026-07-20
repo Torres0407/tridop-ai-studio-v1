@@ -29,8 +29,16 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
 
+      - name: Build services sequentially to prevent OOM
+        run: |
+          services="identity-service api-gateway sites-service ai-service deploy-service domains-service commerce-service billing-service engagement-service analytics-service owner-service"
+          for svc in $services; do
+            echo "Building $svc..."
+            docker compose build $svc
+          done
+
       - name: Start docker-compose stack
-        run: COMPOSE_PARALLEL_LIMIT=2 docker compose up -d --wait
+        run: docker compose up -d --wait
         timeout-minutes: 20
 
       - name: Run integration tests

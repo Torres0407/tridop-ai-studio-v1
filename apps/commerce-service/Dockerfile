@@ -12,7 +12,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/commerce-service ./apps/commerce-service
-RUN npx nx build commerce-service --prod
+RUN NX_DAEMON=false npx nx build commerce-service --prod
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
