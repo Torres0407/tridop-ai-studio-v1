@@ -9,7 +9,7 @@ COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/billing-service ./apps/billing-service
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
 RUN npx nx build billing-service --prod
 
 FROM node:20-alpine AS runtime
