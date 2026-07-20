@@ -10,12 +10,14 @@ COPY nx.json ./
 COPY webpack.config.js ./
 
 # Copy only what's needed for this service + its libs
+
+RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
+
 COPY libs/common ./libs/common
 COPY libs/types   ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/identity-service ./apps/identity-service
 
-RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
 RUN npx nx build identity-service --prod
 
 # ─── Runtime image ────────────────────────────────────────────────────────────

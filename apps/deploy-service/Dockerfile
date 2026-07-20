@@ -5,11 +5,13 @@ COPY package*.json ./
 COPY tsconfig.base.json ./
 COPY nx.json ./
 COPY webpack.config.js ./
+
+RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
+
 COPY libs/common ./libs/common
 COPY libs/types ./libs/types
 COPY libs/clients ./libs/clients
 COPY apps/deploy-service ./apps/deploy-service
-RUN npm ci --ignore-scripts --legacy-peer-deps --no-audit
 RUN npx nx build deploy-service --prod
 
 FROM node:20-alpine AS runtime

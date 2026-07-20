@@ -30,7 +30,7 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache/CodeQL
 
       - name: Start docker-compose stack
-        run: docker compose up -d --wait
+        run: COMPOSE_PARALLEL_LIMIT=2 docker compose up -d --wait
         timeout-minutes: 20
 
       - name: Run integration tests
