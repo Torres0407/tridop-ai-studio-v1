@@ -9,6 +9,16 @@ x-common-env: &common-env
   NODE_ENV: development
   REDIS_URL: redis://redis:6379
   OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318/v1/traces
+  HEALTH_PORT: 3000
+  DATABASE_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=identity
+  MONGODB_URI: mongodb://mongodb:27017/identity_db
+  IDENTITY_POSTGRES_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=identity
+  BILLING_POSTGRES_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=billing
+  COMMERCE_POSTGRES_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=commerce
+  DEPLOY_POSTGRES_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=deploy
+  DOMAINS_POSTGRES_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=domains
+  OWNER_POSTGRES_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=owner
+  SITES_POSTGRES_URL: postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=sites
 
 services:
   # ─── Infrastructure ─────────────────────────────────────────────────────────
@@ -110,6 +120,7 @@ services:
     env_file: apps/sites-service/.env
     environment:
       <<: *common-env
+      MONGO_URL: mongodb://mongodb:27017/sites_db
     ports:
       - '3002:3000'
     healthcheck:
@@ -224,6 +235,7 @@ services:
     env_file: apps/engagement-service/.env
     environment:
       <<: *common-env
+      MONGO_URL: mongodb://mongodb:27017/engagement_db
     ports:
       - '3008:3000'
     healthcheck:
