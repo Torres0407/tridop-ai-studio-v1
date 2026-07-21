@@ -25,8 +25,8 @@ async function bootstrap() {
 
   // ─── 2. Secondary HTTP server for /health only (port 3001) ──────────────────
   const healthApp = await NestFactory.create(AppModule, { logger: false });
-  await healthApp.listen(Number(process.env.HEALTH_PORT ?? 3001));
-  logger.log(`Health endpoint listening on :${process.env.HEALTH_PORT ?? 3001}/health`);
+  await healthApp.listen(Number(process.env.HEALTH_PORT ?? 3000));
+  logger.log(`Health endpoint listening on :${process.env.HEALTH_PORT ?? 3000}/health`);
 
   try {
     await microservice.listen();
