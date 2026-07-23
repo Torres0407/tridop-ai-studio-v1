@@ -26,7 +26,7 @@ import { HealthController } from './health/health.controller';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGO_URL', 'mongodb://localhost:27017/ai_db'),
+        uri: config.get<string>('MONGO_URL') || config.get<string>('MONGODB_URI') || 'mongodb://mongodb:27017/ai_db',
       }),
       inject: [ConfigService],
     }),
@@ -49,7 +49,7 @@ import { HealthController } from './health/health.controller';
         transport: Transport.REDIS,
         options: {
           host: new URL(process.env.REDIS_URL || 'redis://localhost:6379').hostname,
-          port: Number(new URL(process.env.REDIS_URL || 'redis://localhost:6379').port),
+          port: Number(new URL(process.env.REDIS_URL || 'redis://localhost:6379').port) || 6379,
         },
       },
       {
@@ -57,7 +57,7 @@ import { HealthController } from './health/health.controller';
         transport: Transport.REDIS,
         options: {
           host: new URL(process.env.REDIS_URL || 'redis://localhost:6379').hostname,
-          port: Number(new URL(process.env.REDIS_URL || 'redis://localhost:6379').port),
+          port: Number(new URL(process.env.REDIS_URL || 'redis://localhost:6379').port) || 6379,
         },
       },
     ]),

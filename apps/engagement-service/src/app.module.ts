@@ -24,7 +24,7 @@ import { HealthController } from './health/health.controller';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGO_URL', 'mongodb://localhost:27017/engagement_db'),
+        uri: config.get<string>('MONGO_URL') || config.get<string>('MONGODB_URI') || 'mongodb://mongodb:27017/engagement_db',
       }),
       inject: [ConfigService],
     }),

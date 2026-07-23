@@ -28,7 +28,7 @@ import { HealthController } from './health/health.controller';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: config.get<string>('SITES_POSTGRES_URL', 'postgres://tridopai:tridopai@localhost:5432/tridopai'),
+        url: config.get<string>('SITES_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai',
         schema: 'sites',
         entities: [],
         synchronize: config.get('NODE_ENV') !== 'production',
@@ -38,7 +38,7 @@ import { HealthController } from './health/health.controller';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGO_URL', 'mongodb://localhost:27017/sites_db'),
+        uri: config.get<string>('MONGO_URL') || config.get<string>('MONGODB_URI') || 'mongodb://mongodb:27017/sites_db',
       }),
       inject: [ConfigService],
     }),
