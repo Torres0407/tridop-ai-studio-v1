@@ -18,6 +18,8 @@ async function bootstrap() {
     options: {
       host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
       port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
+      retryAttempts: 10,
+      retryDelay: 1000,
     },
   });
 
@@ -29,7 +31,7 @@ async function bootstrap() {
   }
 
   const healthPort = Number(process.env.HEALTH_PORT ?? 3000);
-  await app.listen(healthPort);
+  await app.listen(healthPort, '0.0.0.0');
   logger.log(`Health endpoint listening on :${healthPort}/health`);
 }
 
