@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 export async function handleTrafficCap(siteId: string, kv: KVNamespace): Promise<boolean> {
   const today = new Date().toISOString().split('T')[0];
   const key = `hits:${siteId}:${today}`;

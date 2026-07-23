@@ -18,27 +18,42 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Mirror to Personal Repository
+      - name: Mirror to Personal and Secondary Repositories
         env:
-          PAT_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          TARGET_REPO_URL: ${{ secrets.PERSONAL_REPO_URL }}
+          PAT_TOKEN_1: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          TARGET_REPO_URL_1: ${{ secrets.PERSONAL_REPO_URL }}
+          PAT_TOKEN_2: ${{ secrets.SECOND_ACCESS_TOKEN }}
+          TARGET_REPO_URL_2: ${{ secrets.SECOND_REPO_URL }}
         run: |
-          if [ -z "$TARGET_REPO_URL" ] || [ -z "$PAT_TOKEN" ]; then
-            echo "Skipping mirror step: PERSONAL_REPO_URL or PERSONAL_ACCESS_TOKEN secret is not configured."
-            exit 0
-          fi
-
-          echo "::add-mask::$PAT_TOKEN"
-
-          # Strip existing auth user prefix if present and inject PAT with x-access-token
-          CLEAN_URL=$(echo "$TARGET_REPO_URL" | sed -E 's#https://([^@]+@)?#https://#')
-          AUTHENTICATED_URL=$(echo "$CLEAN_URL" | sed -E "s#https://#https://x-access-token:${PAT_TOKEN}@#")
-
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          git remote add mirror "$AUTHENTICATED_URL" 2>/dev/null || git remote set-url mirror "$AUTHENTICATED_URL"
+          # Function to handle pushing to a target
+          sync_target() {
+            local NAME="$1"
+            local TOKEN="$2"
+            local REPO_URL="$3"
 
-          echo "Pushing all branches and tags to personal repository..."
-          git push --prune mirror "+refs/heads/*:refs/heads/*" "+refs/tags/*:refs/tags/*"
+            if [ -z "$REPO_URL" ] || [ -z "$TOKEN" ]; then
+              echo "Skipping $NAME: Secrets not configured."
+              return 0
+            fi
+
+            echo "::add-mask::$TOKEN"
+
+            # Strip existing auth user prefix if present and inject PAT with x-access-token
+            CLEAN_URL=$(echo "$REPO_URL" | sed -E 's#https://([^@]+@)?#https://#')
+            AUTHENTICATED_URL=$(echo "$CLEAN_URL" | sed -E "s#https://#https://x-access-token:${TOKEN}@#")
+
+            git remote add "$NAME" "$AUTHENTICATED_URL" 2>/dev/null || git remote set-url "$NAME" "$AUTHENTICATED_URL"
+
+            echo "Pushing all branches and tags to $NAME..."
+            git push --prune "$NAME" "+refs/heads/*:refs/heads/*" "+refs/tags/*:refs/tags/*"
+          }
+
+          # Mirror to Primary / Personal
+          sync_target "mirror-primary" "$PAT_TOKEN_1" "$TARGET_REPO_URL_1"
+
+          # Mirror to Secondary
+          sync_target "mirror-secondary" "$PAT_TOKEN_2" "$TARGET_REPO_URL_2"
 

@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 import { handleTrafficCap } from './trafficCap';
 import { handleCache } from './cache';
 
