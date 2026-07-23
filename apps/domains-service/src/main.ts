@@ -10,29 +10,28 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const logger = new Logger('domains-service');
 
-  const microservice = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
-    {
-      transport: Transport.REDIS,
-      options: {
-        host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
-        port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
-      },
+  const app = await NestFactory.create(AppModule);
+  
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.REDIS,
+    options: {
+      host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
+      port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
     },
-  );
-  microservice.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  });
 
-  const healthApp = await NestFactory.create(AppModule, { logger: false });
+  try {
+    await app.startAllMicroservices();
+    logger.log('domains-service listening on Redis transport');
+  } catch (err: any) {
+    logger.warn(`Redis transport offline (${err.message}). Service running in HTTP fallback mode.`);
+  }
+
   const healthPort = Number(process.env.HEALTH_PORT ?? 3000);
-  
-  // Basic health check for now
-  healthApp.getHttpAdapter().get('/health', (req, res) => res.send('ok'));
-  
-  await healthApp.listen(healthPort);
+  await app.listen(healthPort);
   logger.log(`Health endpoint listening on :${healthPort}/health`);
-
-  await microservice.listen();
-  logger.log('domains-service listening on Redis transport');
 }
 
 bootstrap().catch((error) => {

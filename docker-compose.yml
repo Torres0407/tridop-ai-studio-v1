@@ -30,8 +30,8 @@ services:
       POSTGRES_USER: tridopai
       POSTGRES_PASSWORD: tridopai
       POSTGRES_DB: tridopai
-    ports:
-      - '5432:5432'
+#    ports:
+#      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -44,8 +44,8 @@ services:
   mongodb:
     image: mongo:7
     restart: unless-stopped
-    ports:
-      - '27017:27017'
+#    ports:
+#      - '27017:27017'
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -57,8 +57,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - '6379:6379'
+#    ports:
+#      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:

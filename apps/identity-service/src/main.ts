@@ -10,30 +10,29 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const logger = new Logger('identity-service');
 
-  // ─── 1. Redis microservice transport (no HTTP listener) ─────────────────────
-  const microservice = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
-    {
-      transport: Transport.REDIS,
-      options: {
-        host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
-        port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
-      },
-    },
-  );
-  microservice.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // ─── Hybrid Application (HTTP + Redis Microservice) ────────────────────────
+  const app = await NestFactory.create(AppModule);
+  
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  // ─── 2. Secondary HTTP server for /health only (port 3001) ──────────────────
-  const healthApp = await NestFactory.create(AppModule, { logger: false });
-  await healthApp.listen(Number(process.env.HEALTH_PORT ?? 3000));
-  logger.log(`Health endpoint listening on :${process.env.HEALTH_PORT ?? 3000}/health`);
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.REDIS,
+    options: {
+      host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
+      port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
+    },
+  });
 
   try {
-    await microservice.listen();
+    await app.startAllMicroservices();
     logger.log('identity-service listening on Redis transport');
   } catch (err: any) {
     logger.warn(`Redis transport offline (${err.message}). Service running in HTTP fallback mode.`);
   }
+
+  const healthPort = Number(process.env.HEALTH_PORT ?? 3000);
+  await app.listen(healthPort);
+  logger.log(`Health endpoint listening on :${healthPort}/health`);
 }
 
 bootstrap().catch((err) => {

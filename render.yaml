@@ -1,0 +1,266 @@
+# Render Blueprint for hosting all 11 microservices separately
+# Render documentation: https://render.com/docs/blueprint-spec
+
+services:
+  # -------------------------------------------------------------
+  # MANAGED REDIS INSTANCE
+  # -------------------------------------------------------------
+  - type: redis
+    name: tridop-redis
+    ipAllowList: [] # internal access only
+
+  # -------------------------------------------------------------
+  # 1. API GATEWAY (Publicly Accessible Entry Point)
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-api-gateway
+    env: docker
+    dockerfilePath: apps/api-gateway/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "4000"
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 2. IDENTITY SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-identity-service
+    env: docker
+    dockerfilePath: apps/identity-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tridop-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 3. BILLING SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-billing-service
+    env: docker
+    dockerfilePath: apps/billing-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tridop-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 4. COMMERCE SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-commerce-service
+    env: docker
+    dockerfilePath: apps/commerce-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tridop-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 5. SITES SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-sites-service
+    env: docker
+    dockerfilePath: apps/sites-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tridop-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 6. AI SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-ai-service
+    env: docker
+    dockerfilePath: apps/ai-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 7. ANALYTICS SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-analytics-service
+    env: docker
+    dockerfilePath: apps/analytics-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 8. DEPLOY SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-deploy-service
+    env: docker
+    dockerfilePath: apps/deploy-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tridop-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 9. DOMAINS SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-domains-service
+    env: docker
+    dockerfilePath: apps/domains-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tridop-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 10. ENGAGEMENT SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-engagement-service
+    env: docker
+    dockerfilePath: apps/engagement-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+  # -------------------------------------------------------------
+  # 11. OWNER SERVICE
+  # -------------------------------------------------------------
+  - type: web
+    name: tridop-owner-service
+    env: docker
+    dockerfilePath: apps/owner-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tridop-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tridop-redis
+          property: connectionString
+
+# -------------------------------------------------------------
+# MANAGED POSTGRESQL DATABASE
+# -------------------------------------------------------------
+databases:
+  - name: tridop-postgres
+    databaseName: tridopai
+    user: tridopai
