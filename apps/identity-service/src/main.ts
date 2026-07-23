@@ -15,11 +15,22 @@ async function bootstrap() {
   
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
+  let redisHost = 'redis';
+  let redisPort = 6379;
+  try {
+    const parsed = new URL(process.env.REDIS_URL || 'redis://redis:6379');
+    redisHost = parsed.hostname || 'redis';
+    redisPort = Number(parsed.port) || 6379;
+  } catch {
+    redisHost = 'redis';
+    redisPort = 6379;
+  }
+
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.REDIS,
     options: {
-      host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
-      port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
+      host: redisHost,
+      port: redisPort,
       retryAttempts: 10,
       retryDelay: 1000,
     },
