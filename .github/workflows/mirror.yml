@@ -16,6 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Mirror to Personal Repository
         env:
@@ -23,17 +24,21 @@ jobs:
           TARGET_REPO_URL: ${{ secrets.PERSONAL_REPO_URL }}
         run: |
           if [ -z "$TARGET_REPO_URL" ] || [ -z "$PAT_TOKEN" ]; then
-            echo "Error: PERSONAL_REPO_URL or PERSONAL_ACCESS_TOKEN secret is not set."
-            exit 1
+            echo "Skipping mirror step: PERSONAL_REPO_URL or PERSONAL_ACCESS_TOKEN secret is not configured."
+            exit 0
           fi
 
-          # Extract protocol and host to insert authentication token
-          AUTHENTICATED_URL=$(echo "$TARGET_REPO_URL" | sed -E "s#https://#https://${PAT_TOKEN}@#")
+          echo "::add-mask::$PAT_TOKEN"
+
+          # Strip existing auth user prefix if present and inject PAT with x-access-token
+          CLEAN_URL=$(echo "$TARGET_REPO_URL" | sed -E 's#https://([^@]+@)?#https://#')
+          AUTHENTICATED_URL=$(echo "$CLEAN_URL" | sed -E "s#https://#https://x-access-token:${PAT_TOKEN}@#")
 
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          git remote add mirror "$AUTHENTICATED_URL" || git remote set-url mirror "$AUTHENTICATED_URL"
+          git remote add mirror "$AUTHENTICATED_URL" 2>/dev/null || git remote set-url mirror "$AUTHENTICATED_URL"
 
           echo "Pushing all branches and tags to personal repository..."
           git push --prune mirror "+refs/heads/*:refs/heads/*" "+refs/tags/*:refs/tags/*"
+
