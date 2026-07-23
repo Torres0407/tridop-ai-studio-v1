@@ -25,12 +25,10 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install Wrangler
-        run: npm install -g wrangler
-
       - name: Deploy Cloudflare Worker
-        run: wrangler deploy
-        working-directory: site-router
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: 'site-router'
