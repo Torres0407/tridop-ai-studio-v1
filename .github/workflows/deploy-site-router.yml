@@ -6,6 +6,9 @@ on:
     paths:
       - 'site-router/**'
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Wrangler Deploy
@@ -13,7 +16,8 @@ jobs:
     environment: production
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
