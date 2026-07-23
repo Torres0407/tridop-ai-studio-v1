@@ -45,7 +45,7 @@ async function bootstrap() {
   });
 
   const port = Number(process.env.PORT ?? 4000);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`api-gateway listening on :${port}`);
   logger.log(`Swagger UI: http://localhost:${port}/api`);
 }
