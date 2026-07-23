@@ -3,27 +3,32 @@ name: Deploy Services
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
+      fail-fast: false
+      max-parallel: 4
       matrix:
         service:
           - identity-service
           - api-gateway
-          # Uncomment as services are production-ready:
-          # - sites-service
-          # - ai-service
-          # - deploy-service
-          # - domains-service
-          # - commerce-service
-          # - billing-service
-          # - engagement-service
-          # - analytics-service
-          # - owner-service
+          - sites-service
+          - ai-service
+          - deploy-service
+          - domains-service
+          - commerce-service
+          - billing-service
+          - engagement-service
+          - analytics-service
+          - owner-service
 
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
@@ -53,6 +58,18 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/tridopai-${{ matrix.service }}:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/tridopai-${{ matrix.service }}:latest
+
+      - name: Trigger Render Deployment (Optional)
+        run: |
+          # Transform matrix service name to uppercase with underscores (e.g., SITES_SERVICE_RENDER_HOOK)
+          HOOK_VAR_NAME="$(echo "${{ matrix.service }}" | tr '[:lower:]-' '[:upper:]_')_RENDER_HOOK"
+          RENDER_HOOK_URL="${!HOOK_VAR_NAME}"
+          if [ -n "$RENDER_HOOK_URL" ]; then
+            echo "Triggering Render deployment for ${{ matrix.service }}..."
+            curl -s -X POST "$RENDER_HOOK_URL"
+          else
+            echo "No Render Deploy Hook configured for $HOOK_VAR_NAME, skipping automated webhook trigger."
+          fi
 
       - name: Deploy service
         run: |
