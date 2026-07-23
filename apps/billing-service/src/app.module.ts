@@ -17,8 +17,12 @@ import { ReferralEntity } from './entities/referral.entity';
 import { AgencyEntity } from './entities/agency.entity';
 import { AgencyClientEntity } from './entities/agencyClient.entity';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -62,7 +66,7 @@ import { AgencyClientEntity } from './entities/agencyClient.entity';
     }),
     BullModule.registerQueue({ name: 'events' }),
   ],
-  controllers: [BillingController, PaystackHttpController],
+  controllers: [BillingController, PaystackHttpController, HealthController],
   providers: [
     IdempotencyGuard,
     PaystackWebhook,

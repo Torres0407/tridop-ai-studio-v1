@@ -8,7 +8,8 @@ export class HealthController {
   @Get()
   @HealthCheck()
   check() {
-    // analytics-service has no owned database — just confirm the process is alive
-    return this.health.check([]);
+    return this.health.check([
+      async () => ({ analytics: { status: 'up' } }),
+    ]);
   }
 }

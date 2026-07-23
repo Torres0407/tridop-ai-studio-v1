@@ -16,8 +16,12 @@ import { StreamRelay } from './lib/streamRelay';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { GenerationConsumer } from './jobs/generation.consumer';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -58,7 +62,7 @@ import { GenerationConsumer } from './jobs/generation.consumer';
       },
     ]),
   ],
-  controllers: [AIController],
+  controllers: [AIController, HealthController],
   providers: [
     AIRouter,
     GeminiProvider,

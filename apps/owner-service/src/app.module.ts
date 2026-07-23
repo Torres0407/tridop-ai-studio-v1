@@ -13,8 +13,12 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { OwnerUsersController } from './users/ownerUsers.controller';
 import { OwnerSitesController } from './sites/ownerSites.controller';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -67,7 +71,7 @@ import { OwnerSitesController } from './sites/ownerSites.controller';
       },
     ]),
   ],
-  controllers: [OwnerController, OwnerUsersController, OwnerSitesController],
+  controllers: [OwnerController, OwnerUsersController, OwnerSitesController, HealthController],
   providers: [DashboardService, KillSwitchService],
 })
 export class AppModule {}

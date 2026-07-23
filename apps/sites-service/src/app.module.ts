@@ -17,8 +17,12 @@ import { VersionSnapshotModel, VersionSnapshotSchema } from './models/versionSna
 import { TemplateModel, TemplateSchema } from './models/template.model';
 import { ABTestModel, ABTestSchema } from './models/abTest.model';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -60,7 +64,7 @@ import { ABTestModel, ABTestSchema } from './models/abTest.model';
       name: 'events',
     }),
   ],
-  controllers: [SitesController],
+  controllers: [SitesController, HealthController],
   providers: [SitesService, BlocksService, VersionsService, RecordsService],
 })
 export class AppModule {}

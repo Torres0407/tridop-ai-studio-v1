@@ -16,8 +16,12 @@ import { ProductsService } from './products/products.service';
 import { BookingsService } from './bookings/bookings.service';
 import { EventsConsumer } from './events.consumer';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     IdempotencyModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
@@ -46,7 +50,7 @@ import { EventsConsumer } from './events.consumer';
       name: 'events',
     }),
   ],
-  controllers: [CommerceController],
+  controllers: [CommerceController, HealthController],
   providers: [GoogleCalendarService, ProductsService, BookingsService, EventsConsumer],
 })
 export class AppModule {}

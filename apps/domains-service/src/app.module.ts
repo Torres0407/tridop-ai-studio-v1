@@ -16,8 +16,12 @@ import { SubscriptionLapsedConsumer } from './events/subscriptionLapsed.consumer
 import { DeployCompletedConsumer } from './events/deployCompleted.consumer';
 import { DomainEntity } from './entities/domain.entity';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     IdempotencyModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
@@ -44,7 +48,7 @@ import { DomainEntity } from './entities/domain.entity';
     }),
     BullModule.registerQueue({ name: 'events' }),
   ],
-  controllers: [DomainsController],
+  controllers: [DomainsController, HealthController],
   providers: [
     ProvisionSubdomain,
     SpaceshipRegistrar,

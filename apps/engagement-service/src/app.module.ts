@@ -14,8 +14,12 @@ import { FormSubmission, FormSubmissionSchema } from './models/formSubmission.mo
 import { MessageThread, MessageThreadSchema } from './models/messageThread.model';
 import { Review, ReviewSchema } from './models/review.model';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -43,7 +47,7 @@ import { Review, ReviewSchema } from './models/review.model';
     }),
     BullModule.registerQueue({ name: 'events' }),
   ],
-  controllers: [EngagementController],
+  controllers: [EngagementController, HealthController],
   providers: [
     EmailService,
     SmsService,

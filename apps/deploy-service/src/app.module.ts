@@ -14,8 +14,12 @@ import { DomainRegisteredConsumer } from './events/domainRegistered.consumer';
 import { LiveSiteEntity } from './entities/liveSite.entity';
 import { DeployHistoryEntity } from './entities/deployHistory.entity';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
+    TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -41,7 +45,7 @@ import { DeployHistoryEntity } from './entities/deployHistory.entity';
     }),
     BullModule.registerQueue({ name: 'events' }),
   ],
-  controllers: [DeployController],
+  controllers: [DeployController, HealthController],
   providers: [
     ScaffoldSiteBuild,
     InjectSiteData,
