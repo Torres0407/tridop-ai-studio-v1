@@ -99,6 +99,7 @@ export class AuthService {
     if (refreshToken) {
       const Redis = require('ioredis');
       const redis = new Redis(this.configService.get<string>('REDIS_URL', 'redis://localhost:6379'));
+      redis.on('error', () => {});
       await redis.setex(`token:blacklist:${refreshToken}`, 7 * 24 * 60 * 60, userId);
       await redis.quit();
     }
@@ -127,6 +128,7 @@ export class AuthService {
     const token = crypto.randomBytes(32).toString('hex');
     const Redis = require('ioredis');
     const redis = new Redis(this.configService.get<string>('REDIS_URL', 'redis://localhost:6379'));
+    redis.on('error', () => {});
     await redis.setex(`password_reset:${token}`, 15 * 60, user.id);
     await redis.quit();
 
@@ -162,6 +164,7 @@ export class AuthService {
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     const Redis = require('ioredis');
     const redis = new Redis(this.configService.get<string>('REDIS_URL', 'redis://localhost:6379'));
+    redis.on('error', () => {});
     const key = `password_reset:${token}`;
     const userId = await redis.get(key);
 

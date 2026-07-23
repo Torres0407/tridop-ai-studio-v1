@@ -14,6 +14,7 @@ export class KillSwitchMiddleware implements NestMiddleware {
         connectTimeout: 500,
         maxRetriesPerRequest: 0,
       });
+      redis.on('error', () => {});
       const isKilled = await redis.get('platform:killSwitch');
       await redis.quit();
 

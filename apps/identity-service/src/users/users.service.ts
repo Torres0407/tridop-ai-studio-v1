@@ -58,6 +58,7 @@ export class UsersService {
     // Write to Redis to immediately kill active sessions
     const Redis = require('ioredis');
     const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    redis.on('error', () => {});
     await redis.setex(`user:suspended:${id}`, 3600, 'true');
     await redis.quit();
   }
@@ -67,6 +68,7 @@ export class UsersService {
     // Remove from Redis
     const Redis = require('ioredis');
     const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    redis.on('error', () => {});
     await redis.del(`user:suspended:${id}`);
     await redis.quit();
   }

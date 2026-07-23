@@ -21,6 +21,7 @@ export class NotificationStreamGateway {
     res.flushHeaders();
 
     const subscriber = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    subscriber.on('error', () => {});
     subscriber.subscribe(channel);
 
     subscriber.on('message', (_ch, message) => res.write(`data: ${message}\n\n`));

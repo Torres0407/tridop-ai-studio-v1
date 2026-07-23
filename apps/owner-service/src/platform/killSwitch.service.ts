@@ -19,6 +19,7 @@ export class KillSwitchService {
     // Sync to Redis
     const Redis = require('ioredis');
     const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    redis.on('error', () => {});
     await redis.set('platform:killSwitch', active ? 'true' : 'false');
     await redis.quit();
 

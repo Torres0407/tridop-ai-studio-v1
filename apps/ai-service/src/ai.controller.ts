@@ -21,6 +21,7 @@ export class AIController {
     @InjectQueue('ai-generation') private readonly aiQueue: Queue,
   ) {
     this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.redis.on('error', (err) => console.warn(`[AIController] Redis error: ${err.message}`));
   }
 
   @MessagePattern('ai.prompt')

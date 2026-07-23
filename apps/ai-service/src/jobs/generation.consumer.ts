@@ -20,6 +20,7 @@ export class GenerationConsumer extends WorkerHost {
   ) {
     super();
     this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.redis.on('error', (err) => this.logger.warn(`Redis error: ${err.message}`));
   }
 
   async process(job: Job<{ userId: string; siteId: string; prompt: string }>): Promise<any> {

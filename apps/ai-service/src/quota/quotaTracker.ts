@@ -11,6 +11,7 @@ export class QuotaTracker implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     const redisUrl = this.configService.get<string>('REDIS_URL', 'redis://localhost:6379');
     this.redis = new Redis(redisUrl);
+    this.redis.on('error', (err) => console.warn(`[QuotaTracker] Redis error: ${err.message}`));
   }
 
   onModuleDestroy() {

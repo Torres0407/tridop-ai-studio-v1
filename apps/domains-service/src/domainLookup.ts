@@ -11,7 +11,8 @@ export class DomainLookup implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     const redisUrl = this.configService.get<string>('REDIS_URL', 'redis://localhost:6379');
-    this.redis = new Redis(redisUrl);
+    this.redis = new Redis(redisUrl, { maxRetriesPerRequest: 3 });
+    this.redis.on('error', (err) => this.logger.warn(`Redis connection error: ${err.message}`));
   }
 
   onModuleDestroy() {
