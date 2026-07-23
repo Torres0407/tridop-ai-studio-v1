@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
 import { TerminusModule } from '@nestjs/terminus';
+import { Client } from 'pg';
 
 import { UserEntity } from './entities/user.entity';
 import { SessionEntity } from './entities/session.entity';
@@ -19,17 +20,34 @@ import { HealthController } from './health/health.controller';
 
 import { EVENT_NAMES } from '@libs/common';
 
+async function ensureSchemaExists(url: string, schemaName: string) {
+  try {
+    const client = new Client({ connectionString: url });
+    await client.connect();
+    await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}";`);
+    await client.end();
+  } catch (err) {
+    console.warn(`[TypeOrm] Could not pre-create schema "${schemaName}":`, err);
+  }
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
     // Postgres — schema: identity only
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.IDENTITY_POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=identity',
-      entities: [UserEntity, SessionEntity],
-      synchronize: true,
-      retryAttempts: 3,
+    TypeOrmModule.forRootAsync({
+      useFactory: async () => {
+        const dbUrl = process.env.IDENTITY_POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=identity';
+        await ensureSchemaExists(dbUrl, 'identity');
+        return {
+          type: 'postgres',
+          url: dbUrl,
+          entities: [UserEntity, SessionEntity],
+          synchronize: true,
+          retryAttempts: 5,
+        };
+      },
     }),
     TypeOrmModule.forFeature([UserEntity, SessionEntity]),
 

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Client } from 'pg';
 import { CommerceController } from './commerce.controller';
 import { GoogleCalendarService } from './googleCalendar';
 import { ProductEntity } from './entities/product.entity';
@@ -19,6 +20,17 @@ import { EventsConsumer } from './events.consumer';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health/health.controller';
 
+async function ensureSchemaExists(url: string, schemaName: string) {
+  try {
+    const client = new Client({ connectionString: url });
+    await client.connect();
+    await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}";`);
+    await client.end();
+  } catch (err) {
+    console.warn(`[TypeOrm] Could not pre-create schema "${schemaName}":`, err);
+  }
+}
+
 @Module({
   imports: [
     TerminusModule,
@@ -26,13 +38,18 @@ import { HealthController } from './health/health.controller';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get<string>('COMMERCE_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai',
-        schema: 'commerce',
-        entities: [ProductEntity, BookingEntity, OrderEntity, OrderItemEntity, InventoryEntity, CartEntity],
-        synchronize: config.get('NODE_ENV') !== 'production',
-      }),
+      useFactory: async (config: ConfigService) => {
+        const dbUrl = config.get<string>('COMMERCE_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai';
+        await ensureSchemaExists(dbUrl, 'commerce');
+        return {
+          type: 'postgres',
+          url: dbUrl,
+          schema: 'commerce',
+          entities: [ProductEntity, BookingEntity, OrderEntity, OrderItemEntity, InventoryEntity, CartEntity],
+          synchronize: true,
+          retryAttempts: 5,
+        };
+      },
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([ProductEntity, BookingEntity, OrderEntity, OrderItemEntity, InventoryEntity, CartEntity]),
