@@ -24,7 +24,7 @@ import { HealthController } from './health/health.controller';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: config.get<string>('OWNER_POSTGRES_URL', 'postgres://tridopai:tridopai@localhost:5432/tridopai'),
+        url: config.get<string>('OWNER_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai',
         schema: 'owner',
         entities: [PlatformSettingsEntity, OwnerActionLogEntity, FlaggedContentEntity, FeatureFlagEntity],
         synchronize: config.get('NODE_ENV') !== 'production',
@@ -39,8 +39,8 @@ import { HealthController } from './health/health.controller';
         useFactory: (config: ConfigService) => ({
           transport: Transport.REDIS,
           options: {
-            host: new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).hostname,
-            port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port),
+            host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
+            port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
           },
         }),
         inject: [ConfigService],
@@ -51,8 +51,8 @@ import { HealthController } from './health/health.controller';
         useFactory: (config: ConfigService) => ({
           transport: Transport.REDIS,
           options: {
-            host: new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).hostname,
-            port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port),
+            host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
+            port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
           },
         }),
         inject: [ConfigService],
@@ -63,8 +63,8 @@ import { HealthController } from './health/health.controller';
         useFactory: (config: ConfigService) => ({
           transport: Transport.REDIS,
           options: {
-            host: new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).hostname,
-            port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port),
+            host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
+            port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
           },
         }),
         inject: [ConfigService],

@@ -25,7 +25,7 @@ import { HealthController } from './health/health.controller';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: config.get<string>('DEPLOY_POSTGRES_URL', 'postgres://tridopai:tridopai@localhost:5432/tridopai'),
+        url: config.get<string>('DEPLOY_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai',
         schema: 'deploy',
         entities: [LiveSiteEntity, DeployHistoryEntity],
         synchronize: config.get('NODE_ENV') !== 'production',
@@ -37,8 +37,8 @@ import { HealthController } from './health/health.controller';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         connection: {
-          host: new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).hostname,
-          port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port) || 6379,
+          host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
+          port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
         },
       }),
       inject: [ConfigService],

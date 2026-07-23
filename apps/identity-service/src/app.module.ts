@@ -26,7 +26,7 @@ import { EVENT_NAMES } from '@libs/common';
     // Postgres — schema: identity only
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: process.env.IDENTITY_POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://tridopai:tridopai@localhost:5432/tridopai?schema=identity',
+      url: process.env.IDENTITY_POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=identity',
       entities: [UserEntity, SessionEntity],
       synchronize: true,
       retryAttempts: 3,
@@ -34,14 +34,17 @@ import { EVENT_NAMES } from '@libs/common';
     TypeOrmModule.forFeature([UserEntity, SessionEntity]),
 
     // MongoDB — database: identity_db only
-    MongooseModule.forRoot(process.env.MONGODB_URI ?? 'mongodb://localhost:27017/identity_db'),
+    MongooseModule.forRoot(process.env.MONGODB_URI ?? 'mongodb://mongodb:27017/identity_db'),
     MongooseModule.forFeature([
       { name: BusinessProfile.name, schema: BusinessProfileSchema },
     ]),
 
     // BullMQ — publishes USER_CREATED
     BullModule.forRoot({
-      connection: { url: process.env.REDIS_URL },
+      connection: {
+        host: new URL(process.env.REDIS_URL ?? 'redis://redis:6379').hostname,
+        port: Number(new URL(process.env.REDIS_URL ?? 'redis://redis:6379').port) || 6379,
+      },
     }),
     BullModule.registerQueue({
       name: EVENT_NAMES.USER_CREATED,
