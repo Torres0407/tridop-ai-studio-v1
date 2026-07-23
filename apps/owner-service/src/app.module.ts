@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Client } from 'pg';
 import { OwnerController } from './owner.controller';
 import { DashboardService } from './dashboard/dashboard.service';
 import { KillSwitchService } from './platform/killSwitch.service';
@@ -16,19 +17,35 @@ import { OwnerSitesController } from './sites/ownerSites.controller';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health/health.controller';
 
+async function ensureSchemaExists(url: string, schemaName: string) {
+  try {
+    const client = new Client({ connectionString: url });
+    await client.connect();
+    await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}";`);
+    await client.end();
+  } catch (err) {
+    console.warn(`[TypeOrm] Could not pre-create schema "${schemaName}":`, err);
+  }
+}
+
 @Module({
   imports: [
     TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get<string>('OWNER_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai',
-        schema: 'owner',
-        entities: [PlatformSettingsEntity, OwnerActionLogEntity, FlaggedContentEntity, FeatureFlagEntity],
-        synchronize: config.get('NODE_ENV') !== 'production',
-      }),
+      useFactory: async (config: ConfigService) => {
+        const dbUrl = config.get<string>('OWNER_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai';
+        await ensureSchemaExists(dbUrl, 'owner');
+        return {
+          type: 'postgres',
+          url: dbUrl,
+          schema: 'owner',
+          entities: [PlatformSettingsEntity, OwnerActionLogEntity, FlaggedContentEntity, FeatureFlagEntity],
+          synchronize: true,
+          retryAttempts: 5,
+        };
+      },
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([PlatformSettingsEntity, OwnerActionLogEntity, FlaggedContentEntity, FeatureFlagEntity]),
