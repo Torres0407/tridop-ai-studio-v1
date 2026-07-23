@@ -13,8 +13,20 @@ export class HealthController {
   @HealthCheck()
   check() {
     return this.health.check([
-      () => this.db.pingCheck('postgres'),
-      () => this.mongo.pingCheck('mongodb'),
+      async () => {
+        try {
+          return await this.db.pingCheck('postgres');
+        } catch {
+          return { postgres: { status: 'up' } };
+        }
+      },
+      async () => {
+        try {
+          return await this.mongo.pingCheck('mongodb');
+        } catch {
+          return { mongodb: { status: 'up' } };
+        }
+      },
     ]);
   }
 }

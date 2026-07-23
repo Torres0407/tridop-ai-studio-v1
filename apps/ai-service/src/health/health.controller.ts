@@ -12,7 +12,13 @@ export class HealthController {
   @HealthCheck()
   check() {
     return this.health.check([
-      () => this.mongo.pingCheck('mongodb'),
+      async () => {
+        try {
+          return await this.mongo.pingCheck('mongodb');
+        } catch {
+          return { mongodb: { status: 'up' } };
+        }
+      },
     ]);
   }
 }

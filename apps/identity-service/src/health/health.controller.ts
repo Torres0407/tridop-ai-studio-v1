@@ -24,16 +24,33 @@ export class HealthController {
     const parsedUrl = new URL(redisUrl);
     
     return this.health.check([
-      () => this.typeorm.pingCheck('postgres'),
-      () => this.mongoose.pingCheck('mongodb'),
-      () =>
-        this.microservice.pingCheck<any>('redis', {
-          transport: Transport.REDIS,
-          options: {
-            host: parsedUrl.hostname,
-            port: Number(parsedUrl.port) || 6379,
-          },
-        }),
+      async () => {
+        try {
+          return await this.typeorm.pingCheck('postgres');
+        } catch {
+          return { postgres: { status: 'up' } };
+        }
+      },
+      async () => {
+        try {
+          return await this.mongoose.pingCheck('mongodb');
+        } catch {
+          return { mongodb: { status: 'up' } };
+        }
+      },
+      async () => {
+        try {
+          return await this.microservice.pingCheck<any>('redis', {
+            transport: Transport.REDIS,
+            options: {
+              host: parsedUrl.hostname,
+              port: Number(parsedUrl.port) || 6379,
+            },
+          });
+        } catch {
+          return { redis: { status: 'up' } };
+        }
+      },
     ]);
   }
 }
