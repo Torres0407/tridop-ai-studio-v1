@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
+import { Client } from 'pg';
 
 import { DeployController } from './deploy.controller';
 import { ScaffoldSiteBuild } from './engine/scaffoldSiteBuild';
@@ -17,19 +18,35 @@ import { DeployHistoryEntity } from './entities/deployHistory.entity';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health/health.controller';
 
+async function ensureSchemaExists(url: string, schemaName: string) {
+  try {
+    const client = new Client({ connectionString: url });
+    await client.connect();
+    await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}";`);
+    await client.end();
+  } catch (err) {
+    console.warn(`[TypeOrm] Could not pre-create schema "${schemaName}":`, err);
+  }
+}
+
 @Module({
   imports: [
     TerminusModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get<string>('DEPLOY_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai',
-        schema: 'deploy',
-        entities: [LiveSiteEntity, DeployHistoryEntity],
-        synchronize: config.get('NODE_ENV') !== 'production',
-      }),
+      useFactory: async (config: ConfigService) => {
+        const dbUrl = config.get<string>('DEPLOY_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgres://tridopai:tridopai@postgres:5432/tridopai';
+        await ensureSchemaExists(dbUrl, 'deploy');
+        return {
+          type: 'postgres',
+          url: dbUrl,
+          schema: 'deploy',
+          entities: [LiveSiteEntity, DeployHistoryEntity],
+          synchronize: true,
+          retryAttempts: 5,
+        };
+      },
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([LiveSiteEntity, DeployHistoryEntity]),
