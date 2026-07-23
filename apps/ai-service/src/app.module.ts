@@ -35,7 +35,7 @@ import { HealthController } from './health/health.controller';
       useFactory: (config: ConfigService) => ({
         connection: {
           host: new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).hostname,
-          port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port),
+          port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port) || 6379,
         },
       }),
       inject: [ConfigService],
