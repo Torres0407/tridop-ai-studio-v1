@@ -52,7 +52,11 @@ async function ensureSchemaExists(url: string, schemaName: string) {
     TypeOrmModule.forFeature([UserEntity, SessionEntity]),
 
     // MongoDB — database: identity_db only
-    MongooseModule.forRoot(process.env.MONGODB_URI ?? 'mongodb://mongodb:27017/identity_db'),
+    MongooseModule.forRootAsync({
+      useFactory: () => ({
+        uri: process.env.MONGODB_URI || process.env.MONGO_URL || 'mongodb://mongodb:27017/identity_db',
+      }),
+    }),
     MongooseModule.forFeature([
       { name: BusinessProfile.name, schema: BusinessProfileSchema },
     ]),
