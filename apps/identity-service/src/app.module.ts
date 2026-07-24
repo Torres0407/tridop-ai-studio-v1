@@ -31,6 +31,28 @@ async function ensureSchemaExists(url: string, schemaName: string) {
   }
 }
 
+function parseUpstashRedisOptions(urlStr?: string) {
+  if (!urlStr) return { host: 'redis', port: 6379 };
+  try {
+    const u = new URL(urlStr);
+    const isUpstashOrTls = u.protocol === 'rediss:' || u.hostname.includes('upstash.io');
+    const config: any = {
+      host: u.hostname || 'redis',
+      port: Number(u.port) || 6379,
+      maxRetriesPerRequest: null,
+      family: 4,
+    };
+    if (u.password) config.password = decodeURIComponent(u.password);
+    if (u.username) config.username = decodeURIComponent(u.username);
+    if (isUpstashOrTls) {
+      config.tls = { rejectUnauthorized: false };
+    }
+    return config;
+  } catch {
+    return { host: 'redis', port: 6379 };
+  }
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -61,12 +83,9 @@ async function ensureSchemaExists(url: string, schemaName: string) {
       { name: BusinessProfile.name, schema: BusinessProfileSchema },
     ]),
 
-    // BullMQ — publishes USER_CREATED
+    // BullMQ — publishes USER_CREATED (configured for Upstash Redis)
     BullModule.forRoot({
-      connection: {
-        host: new URL(process.env.REDIS_URL ?? 'redis://redis:6379').hostname,
-        port: Number(new URL(process.env.REDIS_URL ?? 'redis://redis:6379').port) || 6379,
-      },
+      connection: parseUpstashRedisOptions(process.env.REDIS_URL),
     }),
     BullModule.registerQueue({
       name: EVENT_NAMES.USER_CREATED,

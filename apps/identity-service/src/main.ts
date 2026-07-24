@@ -15,35 +15,44 @@ async function bootstrap() {
   
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  let redisHost = 'redis';
-  let redisPort = 6379;
-  try {
-    const parsed = new URL(process.env.REDIS_URL || 'redis://redis:6379');
-    redisHost = parsed.hostname || 'redis';
-    redisPort = Number(parsed.port) || 6379;
-  } catch {
-    redisHost = 'redis';
-    redisPort = 6379;
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    try {
+      const parsed = new URL(redisUrl);
+      const isTls = parsed.protocol === 'rediss:' || parsed.hostname.includes('upstash.io');
+      const redisOptions: any = {
+        host: parsed.hostname || 'redis',
+        port: Number(parsed.port) || 6379,
+        family: 4,
+        retryAttempts: 10,
+        retryDelay: 3000,
+      };
+
+      if (parsed.password) {
+        redisOptions.password = decodeURIComponent(parsed.password);
+      }
+      if (parsed.username) {
+        redisOptions.username = decodeURIComponent(parsed.username);
+      }
+      if (isTls) {
+        redisOptions.tls = { rejectUnauthorized: false };
+      }
+
+      app.connectMicroservice<MicroserviceOptions>({
+        transport: Transport.REDIS,
+        options: redisOptions,
+      });
+
+      await app.startAllMicroservices();
+      logger.log('identity-service listening on Upstash Redis transport');
+    } catch (err: any) {
+      logger.warn(`Redis transport offline (${err.message}). Service running in HTTP fallback mode.`);
+    }
+  } else {
+    logger.warn('REDIS_URL not configured. Service running in HTTP fallback mode.');
   }
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.REDIS,
-    options: {
-      host: redisHost,
-      port: redisPort,
-      retryAttempts: 10,
-      retryDelay: 1000,
-    },
-  });
-
-  try {
-    await app.startAllMicroservices();
-    logger.log('identity-service listening on Redis transport');
-  } catch (err: any) {
-    logger.warn(`Redis transport offline (${err.message}). Service running in HTTP fallback mode.`);
-  }
-
-  const healthPort = Number(process.env.HEALTH_PORT ?? 3000);
+  const healthPort = Number(process.env.PORT ?? process.env.HEALTH_PORT ?? 3000);
   await app.listen(healthPort, '0.0.0.0');
   logger.log(`Health endpoint listening on :${healthPort}/health`);
 }
