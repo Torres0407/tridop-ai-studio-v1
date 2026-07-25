@@ -44,7 +44,9 @@ async function bootstrap() {
     res.status(200).json({ status: 'ok', service: 'api-gateway' });
   });
 
-  const port = Number(process.env.PORT ?? 4000);
+  const portEnv = process.env.PORT || process.env.HEALTH_PORT;
+  const port = portEnv && !isNaN(Number(portEnv)) && Number(portEnv) > 0 ? Number(portEnv) : 4000;
+
   await app.listen(port, '0.0.0.0');
   logger.log(`api-gateway listening on :${port}`);
   logger.log(`Swagger UI: http://localhost:${port}/api`);

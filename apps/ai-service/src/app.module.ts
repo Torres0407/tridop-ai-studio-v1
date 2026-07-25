@@ -19,6 +19,31 @@ import { GenerationConsumer } from './jobs/generation.consumer';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health/health.controller';
 
+function parseUpstashRedisOptions(urlStr?: string) {
+  if (!urlStr) return { host: 'localhost', port: 6379 };
+  try {
+    const u = new URL(urlStr);
+    const isUpstashOrTls = u.protocol === 'rediss:' || u.hostname.includes('upstash.io');
+    const config: any = {
+      host: u.hostname || 'localhost',
+      port: Number(u.port) || 6379,
+      family: 4,
+      retryStrategy: () => 1000,
+      enableOfflineQueue: false,
+    };
+    if (u.password) config.password = decodeURIComponent(u.password);
+    if (u.username) config.username = decodeURIComponent(u.username);
+    if (isUpstashOrTls) {
+      config.tls = { rejectUnauthorized: false };
+    }
+    return config;
+  } catch {
+    return { host: 'localhost', port: 6379 };
+  }
+}
+
+const REDIS_OPTIONS = parseUpstashRedisOptions(process.env.REDIS_URL);
+
 @Module({
   imports: [
     TerminusModule,
@@ -33,10 +58,7 @@ import { HealthController } from './health/health.controller';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        connection: {
-          host: new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).hostname,
-          port: Number(new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379')).port) || 6379,
-        },
+        connection: REDIS_OPTIONS,
       }),
       inject: [ConfigService],
     }),
@@ -47,18 +69,12 @@ import { HealthController } from './health/health.controller';
       {
         name: 'SITES_SERVICE',
         transport: Transport.REDIS,
-        options: {
-          host: new URL(process.env.REDIS_URL || 'redis://localhost:6379').hostname,
-          port: Number(new URL(process.env.REDIS_URL || 'redis://localhost:6379').port) || 6379,
-        },
+        options: REDIS_OPTIONS,
       },
       {
         name: 'IDENTITY_SERVICE',
         transport: Transport.REDIS,
-        options: {
-          host: new URL(process.env.REDIS_URL || 'redis://localhost:6379').hostname,
-          port: Number(new URL(process.env.REDIS_URL || 'redis://localhost:6379').port) || 6379,
-        },
+        options: REDIS_OPTIONS,
       },
     ]),
   ],
