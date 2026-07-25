@@ -47,12 +47,30 @@ import { AnalyticsProxy } from './proxy/analytics.proxy';
 import { OwnerProxy } from './proxy/owner.proxy';
 import { SeoProxy } from './proxy/seo.proxy';
 
-const REDIS_OPTIONS = {
-  host: new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').hostname,
-  port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
-  retryStrategy: () => 1000,
-  enableOfflineQueue: false,
-};
+function parseUpstashRedisOptions(urlStr?: string) {
+  if (!urlStr) return { host: 'localhost', port: 6379 };
+  try {
+    const u = new URL(urlStr);
+    const isUpstashOrTls = u.protocol === 'rediss:' || u.hostname.includes('upstash.io');
+    const config: any = {
+      host: u.hostname || 'localhost',
+      port: Number(u.port) || 6379,
+      family: 4,
+      retryStrategy: () => 1000,
+      enableOfflineQueue: false,
+    };
+    if (u.password) config.password = decodeURIComponent(u.password);
+    if (u.username) config.username = decodeURIComponent(u.username);
+    if (isUpstashOrTls) {
+      config.tls = { rejectUnauthorized: false };
+    }
+    return config;
+  } catch {
+    return { host: 'localhost', port: 6379 };
+  }
+}
+
+const REDIS_OPTIONS = parseUpstashRedisOptions(process.env.REDIS_URL);
 
 @Module({
   imports: [
@@ -64,7 +82,7 @@ const REDIS_OPTIONS = {
       { name: 'ai', ttl: 60_000, limit: 20 },
     ]),
 
-    // Register all 10 ClientProxy instances — one per downstream service
+    // Register all 10 ClientProxy instances — one per downstream service via Redis
     ClientsModule.register([
       { name: IDENTITY_CLIENT,   transport: Transport.REDIS, options: REDIS_OPTIONS },
       { name: SITES_CLIENT,      transport: Transport.REDIS, options: REDIS_OPTIONS },
