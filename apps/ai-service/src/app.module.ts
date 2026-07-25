@@ -62,9 +62,10 @@ const REDIS_OPTIONS = parseUpstashRedisOptions(process.env.REDIS_URL);
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue({
-      name: 'ai-generation',
-    }),
+    BullModule.registerQueue(
+      { name: 'ai-generation' },
+      { name: 'events' }
+    ),
     ClientsModule.register([
       {
         name: 'SITES_SERVICE',
