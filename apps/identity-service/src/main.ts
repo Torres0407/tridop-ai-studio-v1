@@ -52,7 +52,9 @@ async function bootstrap() {
     logger.warn('REDIS_URL not configured. Service running in HTTP fallback mode.');
   }
 
-  const healthPort = Number(process.env.PORT ?? process.env.HEALTH_PORT ?? 3000);
+  const portEnv = process.env.PORT || process.env.HEALTH_PORT;
+  const healthPort = portEnv && !isNaN(Number(portEnv)) && Number(portEnv) > 0 ? Number(portEnv) : 3000;
+
   await app.listen(healthPort, '0.0.0.0');
   logger.log(`Health endpoint listening on :${healthPort}/health`);
 }

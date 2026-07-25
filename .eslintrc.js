@@ -28,6 +28,7 @@ module.exports = {
     'unicorn/prefer-top-level-await': 'off',
     'unicorn/consistent-function-scoping': 'off',
     'unicorn/no-array-reduce': 'off',
+    'unicorn/expiring-todo-comments': 'off',
     '@typescript-eslint/no-unsafe-assignment': 'off',
     '@typescript-eslint/no-unsafe-member-access': 'off',
     '@typescript-eslint/no-unsafe-call': 'off',

@@ -67,7 +67,7 @@
     "@typescript-eslint/parser": "^8.63.0",
     "@vitejs/plugin-react": "^6.0.3",
     "better-sqlite3": "^12.11.1",
-    "eslint": "^8.57.1",
+    "eslint": "^9.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-unicorn": "^51.0.0",
     "jest": "^30.4.2",
