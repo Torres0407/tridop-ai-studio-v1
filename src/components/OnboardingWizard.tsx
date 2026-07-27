@@ -182,8 +182,8 @@ const colorNameToHex = (colorName: string): string => {
 };
 
 export default function OnboardingWizard({ 
-  userEmail = 'okuborchinonye@gmail.com', 
-  userName = 'Chinonye Okubor',
+  userEmail = '', 
+  userName = '',
   onComplete,
   onExit
 }: OnboardingWizardProps) {

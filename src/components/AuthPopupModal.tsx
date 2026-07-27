@@ -80,8 +80,8 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
             client.setTokens(tokens.accessToken, tokens.refreshToken);
             const user = await client.users.getMe().catch(() => null);
 
-            const email = tokens.user?.email || user?.email || 'okuborchinonye@gmail.com';
-            const name = tokens.user?.name || user?.name || (email.includes('@') ? email.split('@')[0] : 'Chinonye Okubor');
+            const email = tokens.user?.email || user?.email || '';
+            const name = tokens.user?.name || user?.name || (email.includes('@') ? email.split('@')[0] : 'User');
 
             setSelectedName(name);
             setSelectedEmail(email);
@@ -120,7 +120,7 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
       return;
     }
 
-    const authCode = inputCode.trim() || 'oauth_demo_code';
+    const authCode = inputCode.trim();
     setProgressLog(`Exchanging authorization code with backend identity microservice...`);
     try {
       const tokens = provider === 'google'
@@ -130,8 +130,8 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
       client.setTokens(tokens.accessToken, tokens.refreshToken);
       const user = await client.users.getMe().catch(() => null);
 
-      const email = tokens.user?.email || user?.email || 'okuborchinonye@gmail.com';
-      const name = tokens.user?.name || user?.name || (email.includes('@') ? email.split('@')[0] : 'Chinonye Okubor');
+      const email = tokens.user?.email || user?.email || '';
+      const name = tokens.user?.name || user?.name || (email.includes('@') ? email.split('@')[0] : 'User');
 
       setSelectedName(name);
       setSelectedEmail(email);
@@ -231,63 +231,6 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                   <Chrome className="w-4 h-4" />
                   <span>Sign in with Google Pop-up</span>
                 </button>
-
-                {/* Sandbox explanation & simulation fallback */}
-                <div className="relative flex items-center justify-center py-1">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-blue-950/40"></div>
-                  </div>
-                  <span className="relative bg-[#070913] px-3 text-[9px] font-mono text-slate-500 uppercase">Or Sandbox Bypass</span>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-[10px] text-slate-500 text-center leading-normal mb-1">
-                    Select a simulated identity to skip browser popup blocks:
-                  </p>
-
-                  <button
-                    onClick={() => handleBypassSandboxAuth('Okubor Chinonye', 'okuborchinonye@gmail.com')}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                        OC
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-200">Okubor Chinonye</div>
-                        <div className="text-[10px] text-slate-500 font-mono">okuborchinonye@gmail.com</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-blue-500/10 text-blue-400 font-semibold px-2 py-0.5 rounded uppercase tracking-wider">
-                      Verify Mock
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => handleBypassSandboxAuth('Chinonye Developer', 'dev.okubor@gmail.com')}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                        CD
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-200">Chinonye Developer</div>
-                        <div className="text-[10px] text-slate-500 font-mono">dev.okubor@gmail.com</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-purple-500/10 text-purple-400 font-semibold px-2 py-0.5 rounded uppercase tracking-wider">
-                      Verify Mock
-                    </span>
-                  </button>
-                </div>
-
-                <div className="p-3 bg-blue-950/10 border border-blue-950/40 rounded-xl text-[10px] text-slate-400 leading-relaxed flex gap-2">
-                  <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <span>
-                    Previously, the sandbox assumed simulated users to speed up testing. With real secure OAuth fully configured, you can now sign in natively!
-                  </span>
-                </div>
               </div>
             )}
 
@@ -316,63 +259,6 @@ export default function AuthPopupModal({ isOpen, provider, onClose, onSuccess }:
                   <Github className="w-4 h-4 text-slate-200" />
                   <span>Sign in with GitHub Pop-up</span>
                 </button>
-
-                {/* Sandbox explanation & simulation fallback */}
-                <div className="relative flex items-center justify-center py-1">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-blue-950/40"></div>
-                  </div>
-                  <span className="relative bg-[#070913] px-3 text-[9px] font-mono text-slate-500 uppercase">Or Sandbox Bypass</span>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-[10px] text-slate-500 text-center leading-normal mb-1">
-                    Select a simulated Github developer profile to skip blocks:
-                  </p>
-
-                  <button
-                    onClick={() => handleBypassSandboxAuth('Okubor Chinonye', 'okuborchinonye@gmail.com')}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs">
-                        <Github className="w-4 h-4 text-blue-400" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-200">okuborchinonye (GitHub)</div>
-                        <div className="text-[10px] text-slate-500 font-mono">okuborchinonye@gmail.com</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-blue-500/10 text-blue-400 font-semibold px-2 py-0.5 rounded uppercase tracking-wider">
-                      Verify Mock
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => handleBypassSandboxAuth('Okubor Developer', 'dev.okubor@gmail.com')}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900 hover:border-blue-900/30 transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs">
-                        <Github className="w-4 h-4 text-purple-400" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-200">dev-okubor (GitHub)</div>
-                        <div className="text-[10px] text-slate-500 font-mono">dev.okubor@gmail.com</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-purple-500/10 text-purple-400 font-semibold px-2 py-0.5 rounded uppercase tracking-wider">
-                      Verify Mock
-                    </span>
-                  </button>
-                </div>
-
-                <div className="p-3 bg-blue-950/10 border border-blue-950/40 rounded-xl text-[10px] text-slate-400 leading-relaxed flex gap-2">
-                  <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <span>
-                    GitHub OAuth provider is configured. Click "Pop-up" to login to GitHub, or select an account below to complete the onboarding process.
-                  </span>
-                </div>
               </div>
             )}
 

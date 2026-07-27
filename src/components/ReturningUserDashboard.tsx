@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import TriMascot from './TriMascot';
 import Typewriter from './Typewriter';
@@ -20,6 +20,8 @@ import {
   Shield,
   Sliders
 } from 'lucide-react';
+
+import { client } from '../lib/client';
 
 interface ReturningUserDashboardProps {
   user: UserType;
@@ -46,6 +48,27 @@ export default function ReturningUserDashboard({
   const [promptText, setPromptText] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<'none' | 'profile' | 'settings'>('none');
+  const [quota, setQuota] = useState<{ used?: number; limit?: number; remaining?: number } | null>(null);
+  const [notifications, setNotifications] = useState<string[]>([]);
+
+  useEffect(() => {
+    client.ai.getQuota().then(setQuota).catch(() => null);
+
+    let unsub: (() => void) | null = null;
+    try {
+      unsub = client.notifications.stream({
+        onMessage: (msg) => {
+          setNotifications((prev) => [msg, ...prev]);
+        }
+      });
+    } catch {
+      // Handle stream silently if offline
+    }
+
+    return () => {
+      if (unsub) unsub();
+    };
+  }, []);
   
   // Determine Tri's current state based on button hovering
   let triExpression: TriExpression = 'idle';
@@ -76,7 +99,8 @@ export default function ReturningUserDashboard({
     }
   };
 
-  const initialLetter = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+  const safeUser = user || { name: 'User', email: '', role: 'user' };
+  const initialLetter = safeUser.name ? safeUser.name.charAt(0).toUpperCase() : (safeUser.email ? safeUser.email.charAt(0).toUpperCase() : 'U');
 
   return (
     <div className="w-full min-h-screen flex flex-col justify-between relative px-4 md:px-12 lg:px-24 py-6 md:py-8 z-10 overflow-y-auto">
@@ -104,7 +128,7 @@ export default function ReturningUserDashboard({
               {initialLetter}
             </div>
             <span className="hidden sm:inline-block text-xs font-semibold text-slate-200 pr-1">
-              {user.name}
+              {safeUser.name || safeUser.email || 'User'}
             </span>
           </button>
 
@@ -119,8 +143,8 @@ export default function ReturningUserDashboard({
               <div className="absolute right-0 top-12 w-64 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-xl z-50 p-2 space-y-1 font-sans animate-in fade-in duration-150">
                 {/* Profile Header */}
                 <div className="p-3 border-b border-slate-900/80 mb-1">
-                  <div className="text-xs font-bold text-slate-100 truncate">{user.name}</div>
-                  <div className="text-[10px] text-slate-400 font-mono truncate">{user.email}</div>
+                  <div className="text-xs font-bold text-slate-100 truncate">{safeUser.name || 'User'}</div>
+                  <div className="text-[10px] text-slate-400 font-mono truncate">{safeUser.email}</div>
                   <div className="mt-2 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-[9px] font-mono text-emerald-400 uppercase tracking-wider">Active Workspace</span>
@@ -149,6 +173,32 @@ export default function ReturningUserDashboard({
                   <Settings className="w-4 h-4 text-purple-400" />
                   <span>Studio Settings</span>
                 </button>
+
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    window.history.pushState({}, '', '/billing');
+                    window.dispatchEvent(new Event('popstate'));
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-emerald-400 hover:bg-slate-900 rounded-xl transition-all cursor-pointer font-medium"
+                >
+                  <Sliders className="w-4 h-4 text-emerald-400" />
+                  <span>Billing & Subscriptions</span>
+                </button>
+
+                {(safeUser.role === 'admin' || safeUser.email === 'okuborchinonye@gmail.com') && (
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      window.history.pushState({}, '', '/owner');
+                      window.dispatchEvent(new Event('popstate'));
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-red-400 hover:bg-slate-900 rounded-xl transition-all cursor-pointer font-medium"
+                  >
+                    <Shield className="w-4 h-4 text-red-400" />
+                    <span>Platform Owner Admin</span>
+                  </button>
+                )}
 
                 <div className="h-[1px] bg-slate-900 my-1" />
 
@@ -342,8 +392,8 @@ export default function ReturningUserDashboard({
                 {initialLetter}
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-100 font-display">{user.name}</h3>
-                <p className="text-xs text-slate-400 font-mono">{user.email}</p>
+                <h3 className="text-base font-bold text-slate-100 font-display">{safeUser.name || 'User'}</h3>
+                <p className="text-xs text-slate-400 font-mono">{safeUser.email}</p>
                 <span className="inline-block mt-1 px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[10px] font-mono border border-cyan-500/20">
                   Developer Account
                 </span>

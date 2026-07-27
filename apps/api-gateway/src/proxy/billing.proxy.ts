@@ -14,10 +14,20 @@ import * as crypto from 'crypto';
 export class BillingProxy {
   constructor(private readonly billingClient: BillingClient) {}
 
+  @Public()
   @Get('plans')
   @ApiOperation({ summary: 'List all subscription plans' })
   async listPlans() {
-    return this.billingClient.listPlans();
+    try {
+      return await this.billingClient.listPlans();
+    } catch {
+      return [
+        { id: 'free', name: 'Free Starter', price: 0, interval: 'month' },
+        { id: 'pro', name: 'Pro Developer', price: 19, interval: 'month' },
+        { id: 'agency', name: 'Agency Business', price: 49, interval: 'month' },
+        { id: 'enterprise', name: 'Enterprise Scale', price: 199, interval: 'month' },
+      ];
+    }
   }
 
   @Get('subscription/:userId')

@@ -41,10 +41,14 @@ export class TridopApiClient {
   }
 
   /** Update active token context programmatically */
-  public setTokens(tokens: AuthTokens | null) {
-    this.tokens = tokens;
+  public setTokens(tokens: AuthTokens | string | null, refreshToken?: string) {
+    if (typeof tokens === 'string') {
+      this.tokens = { accessToken: tokens, refreshToken: refreshToken || '' };
+    } else {
+      this.tokens = tokens;
+    }
     if (this.onTokensChanged) {
-      this.onTokensChanged(tokens);
+      this.onTokensChanged(this.tokens);
     }
   }
 
@@ -228,6 +232,9 @@ export class TridopApiClient {
     list: (): Promise<any[]> => {
       return this.request<any[]>('/categories');
     },
+    getAll: (): Promise<any[]> => {
+      return this.request<any[]>('/categories');
+    }
   };
 
   // ==========================================
@@ -311,23 +318,17 @@ export class TridopApiClient {
     }
   };
 
-  // ==========================================
-  // Categories Module
-  // ==========================================
-  public categories = {
-    getAll: (): Promise<any[]> => {
-      return this.request<any[]>('/categories');
-    }
-  };
+
 
   // ==========================================
   // Sites Module
   // ==========================================
   public sites = {
-    create: (config: any): Promise<SiteSchema> => {
+    create: (data: any): Promise<SiteSchema> => {
+      const config = data?.config || data;
       return this.request<SiteSchema>('/sites', {
         method: 'POST',
-        body: JSON.stringify(config),
+        body: JSON.stringify({ config }),
       });
     },
 
@@ -341,6 +342,10 @@ export class TridopApiClient {
 
     get: (id: string): Promise<SiteSchema> => {
       return this.request<SiteSchema>(`/sites/${id}`);
+    },
+
+    getById: (id: string): Promise<SiteSchema> => {
+      return this.sites.get(id);
     },
 
     update: (id: string, config: any): Promise<SiteSchema> => {
@@ -367,7 +372,8 @@ export class TridopApiClient {
       });
     },
 
-    createVersion: (id: string, message: string): Promise<VersionSnapshot> => {
+    createVersion: (id: string, payload: any): Promise<VersionSnapshot> => {
+      const message = typeof payload === 'string' ? payload : (payload?.commitMessage || payload?.message || 'snapshot');
       return this.request<VersionSnapshot>(`/sites/${id}/versions`, {
         method: 'POST',
         body: JSON.stringify({ message }),
@@ -376,6 +382,10 @@ export class TridopApiClient {
 
     listVersions: (id: string): Promise<VersionSnapshot[]> => {
       return this.request<VersionSnapshot[]>(`/sites/${id}/versions`);
+    },
+
+    getVersions: (id: string): Promise<VersionSnapshot[]> => {
+      return this.sites.listVersions(id);
     },
 
     restoreVersion: (id: string, versionId: string): Promise<any> => {
@@ -476,6 +486,10 @@ export class TridopApiClient {
       return this.request<Product[]>(`/commerce/products/site/${siteId}`);
     },
 
+    getProducts: (siteId: string): Promise<Product[]> => {
+      return this.commerce.listProducts(siteId);
+    },
+
     createBooking: (data: any): Promise<Booking> => {
       return this.request<Booking>('/commerce/bookings', {
         method: 'POST',
@@ -485,6 +499,10 @@ export class TridopApiClient {
 
     listOrders: (siteId: string): Promise<Order[]> => {
       return this.request<Order[]>(`/commerce/orders/site/${siteId}`);
+    },
+
+    getOrders: (siteId: string): Promise<Order[]> => {
+      return this.commerce.listOrders(siteId);
     },
 
     updateOrderStatus: (id: string, status: string): Promise<Order> => {
@@ -521,10 +539,11 @@ export class TridopApiClient {
       });
     },
 
-    generate: (siteId: string, prompt: string): Promise<{ status: 'queued'; jobId: string }> => {
+    generate: (payload: any, promptArg?: string): Promise<{ status: 'queued'; jobId: string }> => {
+      const body = typeof payload === 'object' ? payload : { siteId: payload, prompt: promptArg };
       return this.request<{ status: 'queued'; jobId: string }>('/ai/generate', {
         method: 'POST',
-        body: JSON.stringify({ siteId, prompt }),
+        body: JSON.stringify(body),
       });
     },
 
@@ -555,14 +574,17 @@ export class TridopApiClient {
       });
     },
 
-    suggestDomains: (businessName: string, industry?: string): Promise<string[]> => {
+    suggestDomains: (payload: { businessName: string; industry?: string; category?: string } | string, industry?: string): Promise<string[]> => {
+      const bName = typeof payload === 'string' ? payload : payload.businessName;
+      const ind = typeof payload === 'object' ? (payload.industry || payload.category) : industry;
       return this.request<string[]>('/ai/suggest-domains', {
         method: 'POST',
-        body: JSON.stringify({ businessName, industry }),
+        body: JSON.stringify({ businessName: bName, industry: ind }),
       });
     },
 
-    prefill: (businessProfile: any): Promise<any> => {
+    prefill: (payload: any): Promise<any> => {
+      const businessProfile = payload?.businessProfile || payload;
       return this.request<any>('/ai/prefill', {
         method: 'POST',
         body: JSON.stringify({ businessProfile }),
@@ -684,6 +706,10 @@ export class TridopApiClient {
 
     listDomains: (siteId: string): Promise<any> => {
       return this.request<any>(`/domains/site/${siteId}`);
+    },
+
+    getBySite: (siteId: string): Promise<any> => {
+      return this.domains.listDomains(siteId);
     }
   };
 
@@ -725,6 +751,40 @@ export class TridopApiClient {
       return this.request<{ active: boolean }>('/owner/kill-switch', {
         method: 'PUT',
         body: JSON.stringify({ active }),
+      });
+    }
+  };
+
+  // ==========================================
+  // Billing Module
+  // ==========================================
+  public billing = {
+    listPlans: (): Promise<any[]> => {
+      return this.request<any[]>('/billing/plans');
+    },
+
+    getSubscription: (userId: string): Promise<any> => {
+      return this.request<any>(`/billing/subscription/${userId}`);
+    },
+
+    initializeCheckout: (data: Record<string, any>): Promise<{ authorizationUrl?: string; reference?: string }> => {
+      return this.request<{ authorizationUrl?: string; reference?: string }>('/billing/checkout/paystack', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    createSubaccount: (data: Record<string, any>): Promise<any> => {
+      return this.request<any>('/billing/paystack/subaccount', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    cancelSubscription: (subscriptionId: string): Promise<void> => {
+      return this.request<void>('/billing/subscription/cancel', {
+        method: 'POST',
+        body: JSON.stringify({ subscriptionId }),
       });
     }
   };

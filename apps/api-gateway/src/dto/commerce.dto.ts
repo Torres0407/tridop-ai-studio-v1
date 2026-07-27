@@ -19,6 +19,11 @@ export class CreateProductDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  currency?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
   description?: string;
 
   @ApiPropertyOptional()

@@ -13,25 +13,35 @@ export class NotificationStreamGateway {
 
   @Get('stream')
   stream(@Req() req: Request & { user: JwtPayload }, @Res() res: Response) {
-    const channel = `engagement:notifications:${req.user.sub}`;
+    const userId = req.user?.sub || 'usr_anonymous';
+    const channel = `engagement:notifications:${userId}`;
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
 
-    const subscriber = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
-    subscriber.on('error', () => {});
-    subscriber.subscribe(channel);
+    try {
+      const subscriber = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+        maxRetriesPerRequest: null,
+        enableOfflineQueue: false,
+        lazyConnect: true,
+        retryStrategy: () => null,
+      });
+      subscriber.on('error', () => {});
+      subscriber.connect().then(() => subscriber.subscribe(channel)).catch(() => {});
+      subscriber.on('message', (_ch, message) => res.write(`data: ${message}\n\n`));
 
-    subscriber.on('message', (_ch, message) => res.write(`data: ${message}\n\n`));
+      const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), 15_000);
 
-    const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), 15_000);
-
-    req.on('close', () => {
-      clearInterval(heartbeat);
-      subscriber.unsubscribe(channel);
-      subscriber.quit();
-    });
+      req.on('close', () => {
+        clearInterval(heartbeat);
+        subscriber.unsubscribe(channel).catch(() => {});
+        subscriber.quit().catch(() => {});
+      });
+    } catch {
+      const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), 15_000);
+      req.on('close', () => clearInterval(heartbeat));
+    }
   }
 }

@@ -4,19 +4,22 @@ import GlowingBackground from './components/GlowingBackground';
 import CustomCursor from './components/CustomCursor';
 import TriMascot from './components/TriMascot';
 import Typewriter from './components/Typewriter';
-import OnboardingFlow from './components/OnboardingFlow';
 import ReturningUserDashboard from './components/ReturningUserDashboard';
 import OnboardingWizard, { OnboardingState } from './components/OnboardingWizard';
 import BuilderView from './components/BuilderView';
 import ProjectHistoryView from './components/ProjectHistoryView';
+import BillingView from './components/BillingView';
+import OwnerAdminView from './components/OwnerAdminView';
 import { User, Project, Block } from './types';
 import { ChevronDown, Sparkles, UserCheck, Play, Layers } from 'lucide-react';
+import { client } from './lib/client';
 
 
 function generateBlocksForProject(data: OnboardingState): Block[] {
   const roundedButtons = data.vibe === 'Playful' || data.vibe === 'Elegant';
-  const primaryColorHex = data.primaryColor || '#06b6d4';
-  const secondaryColorHex = data.secondaryColor || '#a855f7';
+  const primaryColor = data.primaryColor || '#06b6d4';
+  const secondaryColor = data.secondaryColor || '#a855f7';
+  const fontFamily = data.fontFamily || 'Inter, sans-serif';
 
   // Choose visual backgrounds based on vibe
   const isDark = data.vibe === 'Modern' || data.vibe === 'Bold' || data.vibe === 'Corporate';
@@ -36,41 +39,28 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
   const footerBg = isDark ? 'bg-slate-950 border-t border-slate-900' : 'bg-white border-t border-slate-100';
   const footerText = isDark ? 'text-slate-500' : 'text-slate-400';
 
-  // Fetch placeholder image based on business type
-  let heroImage = 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&auto=format&fit=crop&q=60'; // default tech
+  // Use uploaded logo or hero image if provided, else fallback to category image
+  let heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&auto=format&fit=crop&q=60';
   if (data.businessType === 'restaurant') {
-    heroImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60';
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60';
   } else if (data.businessType === 'salon') {
-    heroImage = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60';
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60';
   } else if (data.businessType === 'retail') {
-    heroImage = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&auto=format&fit=crop&q=60';
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&auto=format&fit=crop&q=60';
   } else if (data.businessType === 'fitness') {
-    heroImage = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=60';
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=60';
   } else if (data.businessType === 'healthcare') {
-    heroImage = 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=800&auto=format&fit=crop&q=60';
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=800&auto=format&fit=crop&q=60';
   } else if (data.businessType === 'agency') {
-    heroImage = 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60';
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60';
   }
 
-  // Create custom bento items based on category
+  // Create custom bento items based on category & brand lines
   let bentoItems = [
-    { title: 'Tailored Service', desc: 'Custom designed solutions fitting your precise goals.' },
+    { title: 'Tailored Service', desc: data.tagline || 'Custom designed solutions fitting your precise goals.' },
     { title: 'High Performance', desc: 'Optimized speed and responsive layouts for edge networks.' },
     { title: 'Modern Security', desc: 'Protected by virtual container isolation standards.' }
   ];
-  if (data.businessType === 'restaurant') {
-    bentoItems = [
-      { title: 'Gourmet Culinary', desc: 'Meticulously crafted dishes cooked by skilled cloud-chefs.' },
-      { title: 'Hyper-Local Delivery', desc: 'Rapid hot-dispatched drones keeping food warm on transit.' },
-      { title: 'Farm to Counter', desc: 'Directly sourced premium organic farm-fresh ingredients.' }
-    ];
-  } else if (data.businessType === 'salon') {
-    bentoItems = [
-      { title: 'Master Stylists', desc: 'Certified color and treatment specialists matching your aesthetic.' },
-      { title: 'Custom Curations', desc: 'Personalized product selections tailored to your unique identity.' },
-      { title: 'Zero Toxins', desc: 'Using strictly premium organic, vegan, and chemical-free formulas.' }
-    ];
-  }
 
   return [
     {
@@ -78,14 +68,17 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       type: 'navigation',
       name: 'Custom Nav Header',
       data: {
-        logo: data.logoUrl ? data.logoUrl : `⚡ ${data.businessName}`,
+        logo: data.logoUrl ? data.logoUrl : `⚡ ${data.businessName || 'Brand'}`,
         links: ['Services', 'About', 'Contact'],
         buttonText1: 'Get Started'
       },
       styles: {
         bg: navBg,
         text: navText,
-        accent: primaryColorHex,
+        accent: primaryColor,
+        primaryColor,
+        secondaryColor,
+        fontFamily,
         paddingY: 'py-4',
         roundedButtons
       }
@@ -95,7 +88,7 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       type: 'hero',
       name: 'Synthesized Hero',
       data: {
-        title: data.tagline || `Tailored modern solutions by ${data.businessName}`,
+        title: data.tagline || `Welcome to ${data.businessName || 'Our Business'}`,
         subtitle: `Curated meticulously for a ${data.vibe} look & feel, targeting ${data.ageRange} demographics in ${data.audienceLocation}.`,
         buttonText1: 'Get Started Today',
         buttonText2: 'Explore Services',
@@ -104,7 +97,10 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       styles: {
         bg: heroBg,
         text: heroText,
-        accent: primaryColorHex,
+        accent: primaryColor,
+        primaryColor,
+        secondaryColor,
+        fontFamily,
         paddingY: 'py-20',
         roundedButtons
       }
@@ -114,14 +110,17 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       type: 'content',
       name: 'Value Proposition Bento',
       data: {
-        title: `Supercharged ${data.businessName} Experience`,
-        subtitle: `A comprehensive outline of why our custom-synthesized workflow outperforms standard frameworks.`,
+        title: `Supercharged ${data.businessName || 'Brand'} Experience`,
+        subtitle: data.tagline || `A comprehensive outline of why our custom-synthesized workflow outperforms standard frameworks.`,
         items: bentoItems
       },
       styles: {
         bg: bentoBg,
         text: bentoText,
-        accent: secondaryColorHex,
+        accent: secondaryColor,
+        primaryColor,
+        secondaryColor,
+        fontFamily,
         paddingY: 'py-16',
         roundedButtons
       }
@@ -131,15 +130,18 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       type: 'cta',
       name: 'Onboard Capture Form',
       data: {
-        title: `Let's discuss your next breakthrough`,
-        subtitle: `Drop your contact details or email below. Our team at ${data.businessName} will be in touch.`,
+        title: `Connect with ${data.businessName || 'Us'}`,
+        subtitle: data.address ? `Visit us at ${data.address} or reach out via ${data.contactEmail || data.phone || 'email'}.` : `Drop your contact details below to get started.`,
         buttonText1: 'Subscribe / Connect',
-        formPlaceholder: 'enter your email address'
+        formPlaceholder: data.contactEmail || 'enter your email address'
       },
       styles: {
         bg: ctaBg,
         text: ctaText,
-        accent: primaryColorHex,
+        accent: primaryColor,
+        primaryColor,
+        secondaryColor,
+        fontFamily,
         paddingY: 'py-14',
         roundedButtons
       }
@@ -149,13 +151,16 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       type: 'footer',
       name: 'Simple Brand Footer',
       data: {
-        copyright: `© 2026 ${data.businessName}. All rights reserved.`,
-        logo: `⚡ ${data.businessName}`
+        copyright: `© 2026 ${data.businessName || 'Brand'}. All rights reserved.`,
+        logo: data.logoUrl ? data.logoUrl : `⚡ ${data.businessName || 'Brand'}`
       },
       styles: {
         bg: footerBg,
         text: footerText,
-        accent: primaryColorHex,
+        accent: primaryColor,
+        primaryColor,
+        secondaryColor,
+        fontFamily,
         paddingY: 'py-8',
         roundedButtons
       }
@@ -363,48 +368,88 @@ export default function App() {
   }, []);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [mockUser, setMockUser] = useState<User>({
-    name: 'Okubor',
-    email: 'okuborchinonye@gmail.com',
+  const [mockUser, setMockUser] = useState<User | null>({
+    name: '',
+    email: '',
   });
 
   // ON PAGE LOAD - Silent auth check
   useEffect(() => {
-    import('./lib/client').then(({ client }) => {
-      client.users.getMe()
-        .then((user) => {
-          setIsAuthenticated(true);
-          setMockUser({ name: user.name || user.email.split('@')[0], email: user.email });
-        })
-        .catch(() => {
-          // Silently stay on landing page
-        });
-    });
+    if (!client.getTokens()?.accessToken) {
+      setIsAuthenticated(false);
+      return;
+    }
+    client.users.getMe()
+      .then((user) => {
+        setIsAuthenticated(true);
+        setMockUser({ name: user.name || user.email?.split('@')[0] || 'User', email: user.email });
+      })
+      .catch(() => {
+        setIsAuthenticated(false);
+        client.setTokens('');
+      });
   }, []);
 
-  // Fetch projects from local storage on authentication
+  // Fetch projects from live API or cache on authentication
   useEffect(() => {
-    const fetchProjects = () => {
-      const email = mockUser.email;
-      const cached = localStorage.getItem(`projects_${email}`);
+    const userEmail = mockUser?.email || 'visitor@tridop.ai';
+    const fetchProjects = async () => {
+      if (client.getTokens()?.accessToken) {
+        try {
+          const liveSites = await client.sites.list();
+          if (Array.isArray(liveSites) && liveSites.length > 0) {
+            const mapped: Project[] = liveSites.map((s: any) => ({
+              id: s.id || s.siteId || String(Date.now()),
+              name: s.name || s.config?.name || 'Untitled Site',
+              status: s.status?.toLowerCase() === 'archived' ? 'archived' : 'active',
+              lastUpdated: s.updatedAt ? new Date(s.updatedAt).toLocaleTimeString() : 'Just now',
+              stack: s.stack || ['Next.js', 'Tailwind', 'NestJS'],
+              blocks: s.blocks || s.config?.blocks || [],
+              userEmail,
+            }));
+            setProjects(mapped);
+            localStorage.setItem(`projects_${userEmail}`, JSON.stringify(mapped));
+            return;
+          }
+        } catch (err: any) {
+          if (err?.statusCode === 401 || err?.status === 401) {
+            setIsAuthenticated(false);
+            client.setTokens('');
+          } else {
+            console.warn('Live API site listing offline/error, checking cache:', err);
+          }
+        }
+      }
+
+      const cached = localStorage.getItem(`projects_${userEmail}`);
       if (cached) {
         setProjects(JSON.parse(cached) as Project[]);
       } else {
-        const defaults = getDefaultProjects(email);
+        const defaults = getDefaultProjects(userEmail);
         setProjects(defaults);
-        localStorage.setItem(`projects_${email}`, JSON.stringify(defaults));
+        localStorage.setItem(`projects_${userEmail}`, JSON.stringify(defaults));
       }
     };
 
-    if (isAuthenticated) {
+    if (isAuthenticated && mockUser?.email && client.getTokens()?.accessToken) {
       fetchProjects();
     }
-  }, [isAuthenticated, mockUser.email]);
+  }, [isAuthenticated, mockUser?.email]);
 
   const handleUpdateProject = async (updatedProject: Project) => {
     setProjects((prev) => 
       prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
     );
+
+    try {
+      await client.sites.update(updatedProject.id, {
+        name: updatedProject.name,
+        status: updatedProject.status,
+        blocks: updatedProject.blocks
+      });
+    } catch (err) {
+      console.warn('Failed updating project on backend API', err);
+    }
 
     const email = mockUser.email;
     const cached = localStorage.getItem(`projects_${email}`);
@@ -420,6 +465,13 @@ export default function App() {
 
   const handleDeleteProject = async (projectId: string) => {
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
+
+    try {
+      await client.sites.delete(projectId);
+    } catch (err) {
+      console.warn('Failed deleting project on backend API', err);
+    }
+
     const email = mockUser.email;
     const cached = localStorage.getItem(`projects_${email}`);
     if (cached) {
@@ -501,27 +553,6 @@ export default function App() {
       {/* Background with custom particle neural network */}
       <GlowingBackground />
 
-      {/* Floating Mock-Auth controller pill in the top margin for immediate grading / testing */}
-      <div className="absolute top-4 left-4 z-40 flex items-center gap-2">
-        <div className="glass-panel border-cyan-500/20 rounded-full px-4 py-1.5 flex items-center gap-2.5 text-xs text-slate-300">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse glow-cyan" />
-          <span className="font-mono">Demo Session:</span>
-          <button 
-            onClick={() => {
-              setIsAuthenticated(!isAuthenticated);
-              setStep(0); // Reset steps
-            }}
-            className={`interactive-chip px-2.5 py-0.5 rounded-md font-sans font-medium transition-all ${
-              isAuthenticated 
-                ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/30' 
-                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-300'
-            }`}
-          >
-            {isAuthenticated ? 'Authenticated' : 'First-time Visitor'}
-          </button>
-        </div>
-      </div>
-
       <AnimatePresence mode="wait">
         
         {currentPath === '/builder' ? (
@@ -534,7 +565,7 @@ export default function App() {
             className="w-full h-full"
           >
             <BuilderView 
-              user={mockUser}
+              user={mockUser || { name: 'User', email: 'user@tridop.ai' }}
               selectedPrompt={selectedPrompt}
               project={currentProject || (projects.length > 0 ? projects[0] : null)}
               onUpdateProject={handleUpdateProject}
@@ -554,7 +585,7 @@ export default function App() {
             className="w-full h-full"
           >
             <ProjectHistoryView 
-              user={mockUser}
+              user={mockUser || { name: 'User', email: 'user@tridop.ai' }}
               projects={projects}
               onBackToDashboard={() => {
                 window.history.pushState({}, '', '/');
@@ -569,6 +600,40 @@ export default function App() {
               onUpdateProject={handleUpdateProject}
               onNewProject={() => {
                 window.history.pushState({}, '', '/onboarding');
+                window.dispatchEvent(new Event('popstate'));
+              }}
+            />
+          </motion.div>
+        ) : currentPath === '/billing' ? (
+          <motion.div
+            key="billing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full h-full"
+          >
+            <BillingView 
+              user={mockUser || { name: 'User', email: 'user@tridop.ai' }}
+              onBackToDashboard={() => {
+                window.history.pushState({}, '', '/');
+                window.dispatchEvent(new Event('popstate'));
+              }}
+            />
+          </motion.div>
+        ) : currentPath === '/owner' ? (
+          <motion.div
+            key="owner"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full h-full"
+          >
+            <OwnerAdminView 
+              user={mockUser || { name: 'User', email: 'user@tridop.ai' }}
+              onBackToDashboard={() => {
+                window.history.pushState({}, '', '/');
                 window.dispatchEvent(new Event('popstate'));
               }}
             />
@@ -609,23 +674,34 @@ export default function App() {
                 };
 
                 // Add to projects list state and save
+                let createdSiteId = newProj.id;
+                try {
+                  const createdSite = await client.sites.create({
+                    name: newProj.name,
+                    blocks: newProj.blocks,
+                    config: {
+                      tagline: newProj.tagline,
+                      vibe: newProj.vibe,
+                      buildMode: newProj.buildMode
+                    }
+                  });
+                  if (createdSite && (createdSite.id || (createdSite as any).siteId)) {
+                    createdSiteId = createdSite.id || (createdSite as any).siteId;
+                    newProj.id = createdSiteId;
+                  }
+                } catch (err) {
+                  console.warn('Failed creating site on backend API', err);
+                }
+
                 setProjects((prev) => [newProj, ...prev]);
 
                 const cached = localStorage.getItem(`projects_${data.accountEmail}`);
                 const updatedList = cached ? [newProj, ...JSON.parse(cached)] : [newProj];
                 localStorage.setItem(`projects_${data.accountEmail}`, JSON.stringify(updatedList));
 
-                try {
-                  await setDoc(doc(db, 'projects', newProj.id), newProj);
-                } catch (err) {
-                  if (err instanceof Error && (err.message.includes('permission') || err.message.includes('Permissions'))) {
-                    handleFirestoreError(err, OperationType.CREATE, `projects/${newProj.id}`);
-                  }
-                  console.warn('Failed to save project to Firestore', err);
-                }
-
                 // Load this project inside the builder page
                 setCurrentProjectId(newProj.id);
+                localStorage.setItem('activeSiteId', newProj.id);
 
                 window.history.pushState({}, '', '/builder');
                 window.dispatchEvent(new Event('popstate'));
@@ -648,9 +724,23 @@ export default function App() {
             <ReturningUserDashboard 
               user={mockUser} 
               projects={projects}
-              onLogout={() => {
+              onLogout={async () => {
+                try {
+                  await client.auth.logout();
+                } catch (e) {
+                  console.warn('Logout API error:', e);
+                }
+                client.setTokens('');
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('accessToken');
+                  localStorage.removeItem('refreshToken');
+                  localStorage.removeItem('user_profile');
+                }
                 setIsAuthenticated(false);
+                setMockUser(null);
                 setStep(0);
+                window.history.pushState({}, '', '/');
+                window.dispatchEvent(new Event('popstate'));
               }}
               onSelectProject={(id) => {
                 setCurrentProjectId(id);
@@ -776,17 +866,32 @@ export default function App() {
                     
                     {/* Active Step Panel (Step 1-4) taking Left 8 columns */}
                     <div className="lg:col-span-8 flex justify-center items-center h-full z-10">
-                      <OnboardingFlow 
-                        currentStep={step}
-                        onSelectPrompt={(text) => setSelectedPrompt(text)}
-                        selectedPrompt={selectedPrompt}
-                        setStep={(s) => setStep(s)}
-                        onFieldFocus={(field) => setFocusedField(field)}
-                        onAuthSuccess={(name, email) => {
-                          setMockUser({ name, email });
-                          setIsAuthenticated(true);
-                        }}
-                      />
+                      <div className="glass-panel border-cyan-500/20 p-8 rounded-2xl max-w-xl w-full space-y-6 text-center shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
+                        <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mx-auto text-xl">
+                          ✨
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold text-white">Synthesize Your Dream Application</h3>
+                          <p className="text-xs text-slate-400 leading-relaxed">
+                            Describe your business concept, brand colors, and vibe. Tridop AI will assemble full-stack components automatically.
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                          <button
+                            onClick={() => setViewState('onboarding')}
+                            className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-slate-950 text-xs font-bold rounded-xl shadow-lg transition-all"
+                          >
+                            Start AI Onboarding Wizard →
+                          </button>
+                          <button
+                            onClick={() => setIsAuthModalOpen(true)}
+                            className="px-6 py-3 bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 text-xs font-semibold rounded-xl transition-all"
+                          >
+                            Sign In / Register
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Fixed companion Mascot Tri on the Right 4 columns */}
