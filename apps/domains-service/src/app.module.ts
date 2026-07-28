@@ -7,7 +7,6 @@ import { IdempotencyModule } from '@libs/common';
 
 import { DomainsController } from './domains.controller';
 import { ProvisionSubdomain } from './subdomain/provisionSubdomain';
-import { SpaceshipRegistrar } from './registrar/spaceship';
 import { DynadotRegistrar } from './registrar/dynadot';
 import { NativeDomainManager } from './nativeDomainManager';
 import { DomainLookup } from './domainLookup';
@@ -89,7 +88,6 @@ const REDIS_OPTIONS = parseUpstashRedisOptions(process.env.REDIS_URL);
   controllers: [DomainsController, HealthController],
   providers: [
     ProvisionSubdomain,
-    SpaceshipRegistrar,
     DynadotRegistrar,
     NativeDomainManager,
     DomainLookup,
