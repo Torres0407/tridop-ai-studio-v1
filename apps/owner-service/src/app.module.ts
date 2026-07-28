@@ -28,6 +28,31 @@ async function ensureSchemaExists(url: string, schemaName: string) {
   }
 }
 
+function parseUpstashRedisOptions(urlStr?: string) {
+  if (!urlStr) return { host: 'localhost', port: 6379 };
+  try {
+    const u = new URL(urlStr);
+    const isUpstashOrTls = u.protocol === 'rediss:' || u.hostname.includes('upstash.io');
+    const config: any = {
+      host: u.hostname || 'localhost',
+      port: Number(u.port) || 6379,
+      family: 4,
+      retryStrategy: () => 1000,
+      enableOfflineQueue: false,
+    };
+    if (u.password) config.password = decodeURIComponent(u.password);
+    if (u.username) config.username = decodeURIComponent(u.username);
+    if (isUpstashOrTls) {
+      config.tls = { rejectUnauthorized: false };
+    }
+    return config;
+  } catch {
+    return { host: 'localhost', port: 6379 };
+  }
+}
+
+const REDIS_OPTIONS = parseUpstashRedisOptions(process.env.REDIS_URL);
+
 @Module({
   imports: [
     TerminusModule,
@@ -49,42 +74,21 @@ async function ensureSchemaExists(url: string, schemaName: string) {
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([PlatformSettingsEntity, OwnerActionLogEntity, FlaggedContentEntity, FeatureFlagEntity]),
-    ClientsModule.registerAsync([
+    ClientsModule.register([
       {
         name: 'IDENTITY_SERVICE',
-        imports: [ConfigModule],
-        useFactory: (config: ConfigService) => ({
-          transport: Transport.REDIS,
-          options: {
-            host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
-            port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
-          },
-        }),
-        inject: [ConfigService],
+        transport: Transport.REDIS,
+        options: REDIS_OPTIONS,
       },
       {
         name: 'SITES_SERVICE',
-        imports: [ConfigModule],
-        useFactory: (config: ConfigService) => ({
-          transport: Transport.REDIS,
-          options: {
-            host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
-            port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
-          },
-        }),
-        inject: [ConfigService],
+        transport: Transport.REDIS,
+        options: REDIS_OPTIONS,
       },
       {
         name: 'BILLING_SERVICE',
-        imports: [ConfigModule],
-        useFactory: (config: ConfigService) => ({
-          transport: Transport.REDIS,
-          options: {
-            host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
-            port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
-          },
-        }),
-        inject: [ConfigService],
+        transport: Transport.REDIS,
+        options: REDIS_OPTIONS,
       },
     ]),
   ],

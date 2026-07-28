@@ -2,14 +2,14 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { ProvisionSubdomain } from './subdomain/provisionSubdomain';
-import { CloudflareForSaaS } from './cloudflareForSaaS';
+import { NativeDomainManager } from './nativeDomainManager';
 import { IdempotencyService } from '@libs/common';
 
 @Controller()
 export class DomainsController {
   constructor(
     private provisionSubdomain: ProvisionSubdomain,
-    private cloudflare: CloudflareForSaaS,
+    private domainManager: NativeDomainManager,
     private idempotency: IdempotencyService,
     private config: ConfigService,
   ) {}
@@ -32,19 +32,19 @@ export class DomainsController {
   @MessagePattern('domains.register')
   async registerDomain(@Payload() data: { domain: string; userId: string; siteId: string; idempotencyKey?: string }) {
     await this.idempotency.checkAndLock('domains', data.idempotencyKey || `${data.userId}-${data.domain}`);
-    await this.cloudflare.provisionHostname(data.domain);
+    const result = await this.domainManager.provisionHostname(data.domain);
     await this.idempotency.complete('domains', data.idempotencyKey || `${data.userId}-${data.domain}`, 'success');
-    return { status: 'registered', domain: data.domain, siteId: data.siteId };
+    return { status: 'registered', domain: data.domain, siteId: data.siteId, details: result };
   }
 
   @MessagePattern('domains.verifyDns')
   async verifyDns(@Payload() data: { domain: string }) {
     const cnameTarget = this.config.get<string>('PROXY_CNAME_TARGET', 'proxy.tridopai.app');
-    return { domain: data.domain, verified: true, cnameTarget };
+    return this.domainManager.provisionHostname(data.domain);
   }
 
   @MessagePattern('domains.ssl.status')
   async sslStatus(@Payload() data: { domain: string }) {
-    return { domain: data.domain, ssl: 'active', provider: 'Cloudflare' };
+    return { domain: data.domain, ssl: 'active', provider: 'Native Auto-SSL' };
   }
 }
