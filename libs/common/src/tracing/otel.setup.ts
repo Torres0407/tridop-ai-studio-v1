@@ -17,7 +17,17 @@ export function initTracing(serviceName: string): void {
       ? rawEndpoint.trim()
       : 'http://localhost:4318/v1/traces';
 
-    const exporter = new OTLPTraceExporter({ url });
+    const headers: Record<string, string> = {};
+    if (process.env.OTEL_EXPORTER_OTLP_HEADERS) {
+      process.env.OTEL_EXPORTER_OTLP_HEADERS.split(',').forEach((header) => {
+        const [k, v] = header.split('=');
+        if (k && v) headers[k.trim()] = v.trim();
+      });
+    } else if (process.env.HONEYCOMB_API_KEY) {
+      headers['x-honeycomb-team'] = process.env.HONEYCOMB_API_KEY;
+    }
+
+    const exporter = new OTLPTraceExporter({ url, headers });
 
     _sdk = new NodeSDK({
       serviceName,
