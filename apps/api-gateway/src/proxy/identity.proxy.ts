@@ -74,6 +74,18 @@ export class AuthProxy {
   }
 
   @Public()
+  @Get('config')
+  @ApiOperation({ summary: 'Get public configuration and OAuth client IDs from backend environment' })
+  getConfig() {
+    return {
+      googleClientId: process.env.GOOGLE_CLIENT_ID || '1092837465019-testgoogleclientid.apps.googleusercontent.com',
+      githubClientId: process.env.GITHUB_CLIENT_ID || 'Ov23lio7tWcWlTeMsb7K',
+      hasGeminiApiKey: Boolean(process.env.GEMINI_API_KEY),
+      hasPaystackSecretKey: Boolean(process.env.PAYSTACK_SECRET_KEY),
+    };
+  }
+
+  @Public()
   @Post('signup')
   @ApiOperation({ summary: 'Register a new user account' })
   async signup(@Body() dto: SignupPayload) {
@@ -92,7 +104,7 @@ export class AuthProxy {
       if (res) {
         const passwordHash = await bcrypt.hash(dto.password, 10);
         registeredUsersStore.set(email, {
-          id: res.user?.id || `usr_${Date.now()}`,
+          id: (res as any).user?.id || `usr_${Date.now()}`,
           email,
           passwordHash,
           name: dto.name || email.split('@')[0],

@@ -239,8 +239,11 @@ export class TridopApiClient {
 
   // ==========================================
   // Auth Module
-  // ==========================================
   public auth = {
+    getConfig: (): Promise<{ googleClientId: string; githubClientId: string; hasGeminiApiKey: boolean; hasPaystackSecretKey: boolean }> => {
+      return this.request<{ googleClientId: string; githubClientId: string; hasGeminiApiKey: boolean; hasPaystackSecretKey: boolean }>('/auth/config');
+    },
+
     signup: (dto: SignupPayload): Promise<AuthTokens> => {
       return this.request<AuthTokens>('/auth/signup', {
         method: 'POST',

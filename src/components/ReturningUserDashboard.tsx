@@ -186,16 +186,16 @@ export default function ReturningUserDashboard({
                   <span>Billing & Subscriptions</span>
                 </button>
 
-                {(safeUser.role === 'admin' || safeUser.email === 'okuborchinonye@gmail.com') && (
+                {(safeUser.role === 'admin' || safeUser.role === 'owner' || (safeUser.email && (safeUser.email.toLowerCase().includes('admin') || safeUser.email === 'okuborchinonye@gmail.com'))) && (
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       window.history.pushState({}, '', '/owner');
                       window.dispatchEvent(new Event('popstate'));
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-red-400 hover:bg-slate-900 rounded-xl transition-all cursor-pointer font-medium"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-rose-400 hover:bg-slate-900 rounded-xl transition-all cursor-pointer font-medium"
                   >
-                    <Shield className="w-4 h-4 text-red-400" />
+                    <Shield className="w-4 h-4 text-rose-400" />
                     <span>Platform Owner Admin</span>
                   </button>
                 )}

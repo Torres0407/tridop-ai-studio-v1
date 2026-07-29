@@ -4,7 +4,9 @@ import GlowingBackground from './components/GlowingBackground';
 import CustomCursor from './components/CustomCursor';
 import TriMascot from './components/TriMascot';
 import Typewriter from './components/Typewriter';
+import OnboardingFlow from './components/OnboardingFlow';
 import ReturningUserDashboard from './components/ReturningUserDashboard';
+import AuthPopupModal from './components/AuthPopupModal';
 import OnboardingWizard, { OnboardingState } from './components/OnboardingWizard';
 import BuilderView from './components/BuilderView';
 import ProjectHistoryView from './components/ProjectHistoryView';
@@ -368,6 +370,9 @@ export default function App() {
   }, []);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authProvider, setAuthProvider] = useState<'google' | 'github' | null>(null);
+  const [pendingOnboardingProject, setPendingOnboardingProject] = useState<Project | null>(null);
   const [mockUser, setMockUser] = useState<User | null>({
     name: '',
     email: '',
@@ -484,7 +489,62 @@ export default function App() {
   // Steps: 0 = Hero, 1 = Tri Intro & Prompt, 2 = AI Planning, 3 = Completed Project, 4 = Ready to Build
   const [step, setStep] = useState<number>(0);
   const [selectedPrompt, setSelectedPrompt] = useState<string>('');
+  const [heroPromptInput, setHeroPromptInput] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string>('');
+
+  const handleInstantPrompt = (promptText: string) => {
+    if (!promptText.trim()) return;
+    setSelectedPrompt(promptText);
+
+    const derivedName = promptText.length > 35 ? promptText.slice(0, 35) + '...' : promptText;
+    const isRestaurant = promptText.toLowerCase().includes('restaurant') || promptText.toLowerCase().includes('food');
+    const isSalon = promptText.toLowerCase().includes('salon') || promptText.toLowerCase().includes('beauty');
+    const isShop = promptText.toLowerCase().includes('shop') || promptText.toLowerCase().includes('store');
+
+    const newProj: Project = {
+      id: `p-prompt-${Date.now()}`,
+      name: derivedName,
+      status: 'active',
+      lastUpdated: 'Just now',
+      stack: ['React', 'Tailwind', 'AI-Synthesized'],
+      blocks: generateBlocksForProject({
+        accountName: '',
+        accountEmail: mockUser?.email || '',
+        businessName: derivedName,
+        tagline: promptText,
+        businessType: isRestaurant ? 'restaurant' : isSalon ? 'salon' : isShop ? 'retail' : 'tech',
+        logoUrl: null,
+        primaryColor: '#06b6d4',
+        secondaryColor: '#a855f7',
+        fontFamily: 'Inter, sans-serif',
+        language: 'English',
+        phone: '',
+        whatsApp: '',
+        contactEmail: mockUser?.email || '',
+        address: '',
+        mapPin: '',
+        socials: { instagram: '', facebook: '', x: '', tiktok: '', linkedin: '', youtube: '' },
+        ageRange: 'All Ages',
+        audienceLocation: 'Global',
+        audienceLanguage: 'English',
+        interests: [],
+        vibe: 'Modern',
+        buildMode: 'AI'
+      }),
+      tagline: promptText,
+      vibe: 'Modern',
+      buildMode: 'AI',
+      userEmail: mockUser?.email || 'visitor@tridop.ai'
+    };
+
+    setProjects((prev) => [newProj, ...prev]);
+    setCurrentProjectId(newProj.id);
+    localStorage.setItem('activeSiteId', newProj.id);
+    localStorage.setItem('initialPrompt', promptText);
+
+    window.history.pushState({}, '', '/builder');
+    window.dispatchEvent(new Event('popstate'));
+  };
   
   const lastScrollTime = useRef<number>(0);
   const touchStartY = useRef<number>(0);
@@ -530,7 +590,11 @@ export default function App() {
 
   // Skip step manually
   const navigateToStep = (targetStep: number) => {
-    if (isAuthenticated) return;
+    if (targetStep >= 4) {
+      window.history.pushState({}, '', '/onboarding');
+      window.dispatchEvent(new Event('popstate'));
+      return;
+    }
     setStep(targetStep);
   };
 
@@ -648,12 +712,9 @@ export default function App() {
             className="w-full h-full"
           >
             <OnboardingWizard 
-              userEmail={mockUser.email}
-              userName="Chinonye Okubor"
+              userEmail={mockUser?.email}
+              userName={mockUser?.name || "Chinonye Okubor"}
               onComplete={async (data) => {
-                setMockUser({ name: data.accountName, email: data.accountEmail });
-                setIsAuthenticated(true);
-
                 // Create the project
                 const newProj: Project = {
                   id: `p-new-${Date.now()}`,
@@ -670,41 +731,44 @@ export default function App() {
                   address: data.address,
                   vibe: data.vibe,
                   buildMode: data.buildMode,
-                  userEmail: data.accountEmail
+                  userEmail: data.accountEmail || mockUser?.email || ''
                 };
 
-                // Add to projects list state and save
-                let createdSiteId = newProj.id;
-                try {
-                  const createdSite = await client.sites.create({
-                    name: newProj.name,
-                    blocks: newProj.blocks,
-                    config: {
-                      tagline: newProj.tagline,
-                      vibe: newProj.vibe,
-                      buildMode: newProj.buildMode
-                    }
-                  });
-                  if (createdSite && (createdSite.id || (createdSite as any).siteId)) {
-                    createdSiteId = createdSite.id || (createdSite as any).siteId;
-                    newProj.id = createdSiteId;
-                  }
-                } catch (err) {
-                  console.warn('Failed creating site on backend API', err);
-                }
-
                 setProjects((prev) => [newProj, ...prev]);
-
-                const cached = localStorage.getItem(`projects_${data.accountEmail}`);
-                const updatedList = cached ? [newProj, ...JSON.parse(cached)] : [newProj];
-                localStorage.setItem(`projects_${data.accountEmail}`, JSON.stringify(updatedList));
-
-                // Load this project inside the builder page
                 setCurrentProjectId(newProj.id);
                 localStorage.setItem('activeSiteId', newProj.id);
 
-                window.history.pushState({}, '', '/builder');
-                window.dispatchEvent(new Event('popstate'));
+                if (client.getTokens()?.accessToken) {
+                  try {
+                    const createdSite = await client.sites.create({
+                      name: newProj.name,
+                      blocks: newProj.blocks,
+                      config: {
+                        tagline: newProj.tagline,
+                        vibe: newProj.vibe,
+                        buildMode: newProj.buildMode
+                      }
+                    });
+                    if (createdSite && (createdSite.id || (createdSite as any).siteId)) {
+                      newProj.id = createdSite.id || (createdSite as any).siteId;
+                      setCurrentProjectId(newProj.id);
+                    }
+                  } catch (err) {
+                    console.warn('Failed creating site on backend API', err);
+                  }
+
+                  const cached = localStorage.getItem(`projects_${data.accountEmail}`);
+                  const updatedList = cached ? [newProj, ...JSON.parse(cached)] : [newProj];
+                  localStorage.setItem(`projects_${data.accountEmail}`, JSON.stringify(updatedList));
+
+                  window.history.pushState({}, '', '/builder');
+                  window.dispatchEvent(new Event('popstate'));
+                } else {
+                  // User is not authenticated -> Open Auth Modal / Pages!
+                  setPendingOnboardingProject(newProj);
+                  setAuthProvider(null);
+                  setIsAuthModalOpen(true);
+                }
               }}
               onExit={() => {
                 window.history.pushState({}, '', '/');
@@ -797,10 +861,13 @@ export default function App() {
               </div>
               <div className="pointer-events-auto flex items-center gap-2.5">
                 <button 
-                  onClick={() => setIsAuthenticated(true)}
-                  className="interactive-chip px-5 py-2 rounded-full border border-slate-800 hover:border-slate-700 bg-slate-950/40 text-slate-300 text-xs font-sans font-medium hover:text-white transition-all duration-300 flex items-center gap-1.5"
+                  onClick={() => {
+                    setAuthProvider(null);
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="interactive-chip px-5 py-2 rounded-full border border-slate-800 hover:border-slate-700 bg-slate-950/40 text-slate-300 text-xs font-sans font-medium hover:text-white transition-all duration-300 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <UserCheck className="w-3.5 h-3.5" /> Sign In
+                  <UserCheck className="w-3.5 h-3.5" /> Sign In / Register
                 </button>
               </div>
             </header>
@@ -811,7 +878,7 @@ export default function App() {
                 /* HERO SECTION */
                 <div className="w-full max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                   
-                  {/* Left Column: Sequential Typewriter Animation */}
+                  {/* Left Column: Sequential Typewriter Animation + Instant Prompt Input */}
                   <div className="lg:col-span-7 flex flex-col justify-center min-h-[350px]">
                     <Typewriter
                       lines={[
@@ -824,6 +891,8 @@ export default function App() {
                       delayBetweenLines={700}
                       speed={45}
                     />
+
+
                   </div>
 
                   {/* Right Column: Tri Mascot with Floating Motion */}
@@ -866,32 +935,17 @@ export default function App() {
                     
                     {/* Active Step Panel (Step 1-4) taking Left 8 columns */}
                     <div className="lg:col-span-8 flex justify-center items-center h-full z-10">
-                      <div className="glass-panel border-cyan-500/20 p-8 rounded-2xl max-w-xl w-full space-y-6 text-center shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
-                        <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mx-auto text-xl">
-                          ✨
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="text-xl font-bold text-white">Synthesize Your Dream Application</h3>
-                          <p className="text-xs text-slate-400 leading-relaxed">
-                            Describe your business concept, brand colors, and vibe. Tridop AI will assemble full-stack components automatically.
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                          <button
-                            onClick={() => setViewState('onboarding')}
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-slate-950 text-xs font-bold rounded-xl shadow-lg transition-all"
-                          >
-                            Start AI Onboarding Wizard →
-                          </button>
-                          <button
-                            onClick={() => setIsAuthModalOpen(true)}
-                            className="px-6 py-3 bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 text-xs font-semibold rounded-xl transition-all"
-                          >
-                            Sign In / Register
-                          </button>
-                        </div>
-                      </div>
+                      <OnboardingFlow 
+                        currentStep={step}
+                        onSelectPrompt={(text) => setSelectedPrompt(text)}
+                        selectedPrompt={selectedPrompt}
+                        setStep={(s) => navigateToStep(s)}
+                        onFieldFocus={(field) => setFocusedField(field)}
+                        onAuthSuccess={(name, email) => {
+                          setMockUser({ name, email });
+                          setIsAuthenticated(true);
+                        }}
+                      />
                     </div>
 
                     {/* Fixed companion Mascot Tri on the Right 4 columns */}
@@ -902,28 +956,13 @@ export default function App() {
                             step === 1 ? 'talking' : 
                             step === 2 ? 'thinking' : 
                             step === 3 ? 'wink' : 
-                            step === 4 ? (
-                              focusedField === 'name' ? 'pointing' :
-                              focusedField === 'email' ? 'pointing' :
-                              focusedField === 'password' ? 'pointing' :
-                              focusedField === 'social' ? 'excited' :
-                              focusedField === 'submit' ? 'wink' :
-                              'pointing'
-                            ) : 'excited'
+                            step === 4 ? 'excited' : 'idle'
                           } 
                           speechText={
-                            step === 1 ? "I can build anything. Pick a concept or type yours!" :
-                            step === 2 ? "Compiling core features and backend routers..." :
-                            step === 3 ? "Boom! A fully live custom app sandbox." :
-                            step === 4 ? (
-                              focusedField === 'name' ? "Enter your name" :
-                              focusedField === 'email' ? "Great! Now type in your email address." :
-                              focusedField === 'password' ? "Make sure your password is secure and at least 8 characters long!" :
-                              focusedField === 'social' ? "You can sign up instantly with Google or GitHub!" :
-                              focusedField === 'submit' ? "Ready to deploy? Let's sign you in!" :
-                              focusedField === 'mode' ? "Click here to toggle between sign up and log in!" :
-                              "Let's create your account! Fill in your details to get started."
-                            ) : "Let's deploy your vision!"
+                            step === 1 ? "Choose a template concept or describe your app!" :
+                            step === 2 ? "Compiling features, DB tables, and REST APIs..." :
+                            step === 3 ? "Your interactive sandbox preview is live!" :
+                            step === 4 ? "Let's personalize your workspace settings!" : "Welcome!"
                           }
                         />
                       </div>
@@ -934,21 +973,41 @@ export default function App() {
               )}
             </div>
 
-            {/* Bottom Footer Area containing Navigation and Scroll indicator */}
-            <footer className="w-full px-6 md:px-12 py-6 flex flex-col md:flex-row justify-between items-center gap-4 border-t border-slate-900/40 bg-slate-950/20 backdrop-blur-md z-30">
+            {/* Footer Step Tracker */}
+            <footer className="w-full px-6 md:px-12 py-5 flex justify-between items-center z-30 pointer-events-auto border-t border-slate-900/60 bg-slate-950/40 backdrop-blur-md">
               
-              {/* Scroll / Swipe instructions */}
-              <div className="flex items-center gap-2.5 text-xs text-slate-500 font-mono select-none">
-                <ChevronDown className="w-4 h-4 text-cyan-400 animate-bounce" />
+              {/* Back / Restart Step Button */}
+              <div className="flex items-center gap-2">
+                {step > 0 && (
+                  <button
+                    onClick={() => setStep(step - 1)}
+                    className="interactive-chip px-4 py-1.5 rounded-full border border-slate-800 hover:border-slate-700 bg-slate-900/40 text-slate-400 text-xs font-mono hover:text-slate-200 transition-all cursor-pointer"
+                  >
+                    ← Back
+                  </button>
+                )}
+                {step === 0 && (
+                  <button
+                    onClick={() => setStep(1)}
+                    className="interactive-chip px-5 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-slate-950 text-xs font-semibold shadow-lg shadow-cyan-500/10 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-slate-950" /> Start Building
+                  </button>
+                )}
               </div>
 
-              {/* Progress Tracker Bullets */}
-              <div className="flex items-center gap-1.5 md:gap-3">
-                {stepTitles.map((title) => (
+              {/* Step Navigation Dots */}
+              <div className="flex items-center gap-3">
+                {[
+                  { num: 1, label: 'Ideation' },
+                  { num: 2, label: 'Architecture' },
+                  { num: 3, label: 'Preview' },
+                  { num: 4, label: 'Brand Setup' }
+                ].map((title) => (
                   <button
                     key={title.num}
-                    onClick={() => navigateToStep(title.num)}
-                    className="interactive-chip group flex items-center gap-1.5 focus:outline-none"
+                    onClick={() => setStep(title.num)}
+                    className="group flex items-center gap-1.5 focus:outline-none cursor-pointer"
                   >
                     <div className={`h-1.5 rounded-full transition-all duration-300 ${
                       step === title.num 
@@ -976,6 +1035,54 @@ export default function App() {
         )}
 
       </AnimatePresence>
+
+      {/* Auth Modal Trigger & Popup */}
+      <AuthPopupModal
+        isOpen={isAuthModalOpen}
+        provider={authProvider}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={async (name, email, isAdmin) => {
+          const userObj = { name, email, role: isAdmin || email.toLowerCase().includes('admin') ? 'admin' : 'user' };
+          setMockUser(userObj);
+          setIsAuthenticated(true);
+          setIsAuthModalOpen(false);
+
+          if (isAdmin || email.toLowerCase().includes('admin')) {
+            window.history.pushState({}, '', '/owner');
+            window.dispatchEvent(new Event('popstate'));
+            return;
+          }
+
+          if (pendingOnboardingProject) {
+            try {
+              const createdSite = await client.sites.create({
+                name: pendingOnboardingProject.name,
+                blocks: pendingOnboardingProject.blocks,
+                config: {
+                  tagline: pendingOnboardingProject.tagline,
+                  vibe: pendingOnboardingProject.vibe,
+                  buildMode: pendingOnboardingProject.buildMode
+                }
+              });
+              if (createdSite && (createdSite.id || (createdSite as any).siteId)) {
+                pendingOnboardingProject.id = createdSite.id || (createdSite as any).siteId;
+                setCurrentProjectId(pendingOnboardingProject.id);
+              }
+            } catch (err) {
+              console.warn('Backend site creation error:', err);
+            }
+            setPendingOnboardingProject(null);
+            window.history.pushState({}, '', '/builder');
+            window.dispatchEvent(new Event('popstate'));
+          } else {
+            client.users.getMe().then(user => {
+              if (user) {
+                setMockUser({ name: user.name || user.email?.split('@')[0] || 'User', email: user.email, role: user.role });
+              }
+            }).catch(() => null);
+          }
+        }}
+      />
 
       {/* Sleek dynamic cursor overlay */}
       <CustomCursor />

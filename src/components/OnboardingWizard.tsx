@@ -475,6 +475,22 @@ export default function OnboardingWizard({
             <div className="flex-1 pr-2 mb-6 space-y-6">
             {currentStep === 1 && (
               <div className="space-y-6 animate-fade-in" id="step-2-basics">
+                
+                {/* Reassuring Prompt Banner */}
+                <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-cyan-300 text-xs flex items-center justify-between gap-3 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>Prompting a site? You don't need business info now — customize your business details during deployment!</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="px-3 py-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[11px] font-bold rounded-lg shrink-0 transition-all cursor-pointer"
+                  >
+                    Quick Start →
+                  </button>
+                </div>
+
                 <div className="space-y-2">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-mono">
                     <Briefcase className="w-3 h-3" /> Core Foundation

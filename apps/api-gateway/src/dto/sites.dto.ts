@@ -2,12 +2,36 @@ import { IsString, IsNotEmpty, IsObject, IsOptional, IsNumber } from 'class-vali
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSiteDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  blocks?: any;
+
+  @ApiPropertyOptional()
   @IsObject()
-  config!: any;
+  @IsOptional()
+  config?: any;
 }
 
 export class UpdateSiteDto {
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  blocks?: any;
+
   @ApiPropertyOptional()
   @IsObject()
   @IsOptional()

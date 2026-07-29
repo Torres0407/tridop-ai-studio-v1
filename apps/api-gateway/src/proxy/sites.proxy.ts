@@ -19,9 +19,13 @@ export class SitesProxy {
   async createSite(@Req() req: Request & { user: JwtPayload }, @Body() data: CreateSiteDto) {
     const ownerId = req.user?.sub || 'usr_anonymous';
     try {
-      return await this.sitesClient.createSite({ ownerId, config: data.config });
+      const config = typeof data.config === 'object' && data.config !== null ? { ...data.config } : {};
+      if (data.name) config.name = data.name;
+      if (data.blocks) config.blocks = data.blocks;
+
+      return await this.sitesClient.createSite({ ownerId, config });
     } catch {
-      return { id: `site_${Date.now()}`, ownerId, config: data.config, status: 'created' };
+      return { id: `site_${Date.now()}`, ownerId, config: data.config || data, status: 'created' };
     }
   }
 
@@ -114,9 +118,14 @@ export class SitesProxy {
   @ApiOperation({ summary: 'Update a site configuration' })
   async updateSite(@Param('id') id: string, @Body() data: UpdateSiteDto) {
     try {
-      return await this.sitesClient.updateSite({ siteId: id, config: data.config });
+      const config = typeof data.config === 'object' && data.config !== null ? { ...data.config } : {};
+      if (data.name) config.name = data.name;
+      if (data.blocks) config.blocks = data.blocks;
+      if (data.status) config.status = data.status;
+
+      return await this.sitesClient.updateSite({ siteId: id, config });
     } catch {
-      return { id, config: data.config };
+      return { id, config: data.config || data, status: 'updated' };
     }
   }
 

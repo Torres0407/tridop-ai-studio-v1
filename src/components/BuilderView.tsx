@@ -371,8 +371,16 @@ export default function BuilderView({
   const [aiStatusLines, setAiStatusLines] = useState<string[]>([]);
   const [showNotification, setShowNotification] = useState<string | null>(null);
 
-  // Publish Success Modal
+  // Publish & Deployment Phase State
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [deployStep, setDeployStep] = useState<'config' | 'deploying' | 'done'>('config');
+  const [deployBusinessName, setDeployBusinessName] = useState<string>('');
+  const [deployTagline, setDeployTagline] = useState<string>('');
+  const [deployEmail, setDeployEmail] = useState<string>('');
+  const [deployPhone, setDeployPhone] = useState<string>('');
+  const [deployAddress, setDeployAddress] = useState<string>('');
+  const [deploySubdomain, setDeploySubdomain] = useState<string>('');
+
   const [publishProgress, setPublishProgress] = useState<number>(0);
   const [publishSuccess, setPublishSuccess] = useState<boolean>(false);
   const [publishedUrl, setPublishedUrl] = useState<string>('');
@@ -581,12 +589,14 @@ export default function BuilderView({
     setAiWorking(true);
     setAiStatusLines(["🔍 Invoking AI service endpoint..."]);
     setMascotExpression('thinking');
-    setMascotText("Analyzing instructions... consulting compilation neural nets to translate this request into code adjustments.");
+    setMascotText("Analyzing instructions... consulting compilation neural nets to translate your prompt into layout & copy adjustments.");
 
+    let aiSynthesizedCopy = '';
     try {
-      const assist = await client.ai.assistCopy({ text: promptText, tone: 'Professional' });
+      const assist = await client.ai.assistCopy({ text: promptText, tone: 'Professional', instruction: promptText });
       if (assist?.text) {
-        setAiStatusLines(prev => [...prev, `✨ Copy AI synthesized: "${assist.text.slice(0, 60)}..."`]);
+        aiSynthesizedCopy = assist.text.trim();
+        setAiStatusLines(prev => [...prev, `✨ Gemini AI synthesized: "${aiSynthesizedCopy.slice(0, 60)}..."`]);
       }
     } catch (err) {
       console.warn('AI assist endpoint fallback:', err);
@@ -595,7 +605,7 @@ export default function BuilderView({
     const lines = [
       "🔍 Parsing prompt inputs: \"" + promptText + "\"",
       "🧬 Running semantic builder mappings on layout...",
-      "💻 Tweaking CSS styles and adjusting variables...",
+      "💻 Tweaking CSS styles, copy, and layout components...",
       "💥 Compiling custom HTML nodes with optimized performance...",
       "✨ Injecting state modifiers... Done!"
     ];
@@ -632,22 +642,68 @@ export default function BuilderView({
         const customColorHex = hexMatch ? hexMatch[0] : (matchedColorName ? colorMap[matchedColorName] : null);
 
         // 2. Font matching
-        const fonts = ['Outfit', 'Inter', 'Roboto', 'Playfair Display', 'Poppins', 'Cinzel', 'Montserrat', 'Plus Jakarta Sans'];
+        const fonts = ['Outfit', 'Inter', 'Roboto', 'Playfair Display', 'Poppins', 'Cinzel', 'Montserrat', 'Plus Jakarta Sans', 'Space Grotesk', 'JetBrains Mono'];
         const matchedFont = fonts.find(f => lower.includes(f.toLowerCase()));
 
-        // 3. Preset block request matching
+        // 3. Image matching by topic
+        const topicImages: Record<string, string> = {
+          food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60',
+          pizza: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=60',
+          coffee: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=60',
+          salon: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60',
+          beauty: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60',
+          tech: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60',
+          dashboard: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1000&auto=format&fit=crop&q=60',
+          fitness: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=60',
+          car: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=60'
+        };
+        const matchedTopic = Object.keys(topicImages).find(t => lower.includes(t));
+
+        // 4. Preset block request matching
         const presetsMap: Record<string, string> = {
           pricing: 'Pricing Plans',
-          testimonial: 'Customer Reviews',
-          review: 'Customer Reviews',
-          gallery: 'Media Showcase',
+          testimonial: 'Testimonial Bento Grid',
+          review: 'Testimonial Bento Grid',
+          gallery: 'Dashboard Spotlight',
+          media: 'Dashboard Spotlight',
           feature: 'Feature Bento Grid',
-          faq: 'FAQ Accordion',
-          contact: 'Contact & Support Form'
+          bento: 'Feature Bento Grid',
+          cta: 'Enterprise Invitation',
+          contact: 'Newsletter Signup'
         };
-        const requestedPresetKey = Object.keys(presetsMap).find(k => lower.includes(k));
+        const requestedAddKey = (lower.includes('add') || lower.includes('insert') || lower.includes('include') || lower.includes('create'))
+          ? Object.keys(presetsMap).find(k => lower.includes(k))
+          : null;
 
-        if (customColorHex) {
+        // 5. Explicit copy targets
+        const isSubtitleEdit = lower.includes('subtitle') || lower.includes('subheading') || lower.includes('description');
+        const isTitleEdit = lower.includes('title') || lower.includes('headline') || lower.includes('heading') || lower.includes('header text');
+        const isButtonEdit = lower.includes('button') || lower.includes('cta text');
+
+        if (requestedAddKey) {
+          const presetName = presetsMap[requestedAddKey];
+          const presetBlock = blockPresets.find(p => p.name === presetName || p.type.toLowerCase().includes(requestedAddKey));
+          if (presetBlock) {
+            const newBlock: Block = {
+              ...presetBlock,
+              id: `b-ai-${Date.now()}`
+            };
+            updated.push(newBlock);
+            desc = `AI: Added ${presetName} Block`;
+            setSelectedBlockId(newBlock.id);
+            setMascotText(`Synthesized and inserted "${presetName}" directly into your workspace layout!`);
+            setMascotExpression('excited');
+          }
+        } else if (lower.includes('remove') || lower.includes('delete')) {
+          const typeToRemove = ['hero', 'navigation', 'footer', 'content', 'cta', 'socialproof', 'media']
+            .find(t => lower.includes(t));
+          if (typeToRemove) {
+            updated = blocks.filter(b => b.type !== typeToRemove);
+            desc = `AI: Removed ${typeToRemove} section`;
+            setMascotText(`Removed ${typeToRemove} section from layout!`);
+            setMascotExpression('pointing');
+          }
+        } else if (customColorHex) {
           updated = blocks.map(b => ({
             ...b,
             styles: {
@@ -670,20 +726,6 @@ export default function BuilderView({
           desc = `AI: Switch Typography to ${matchedFont}`;
           setMascotText(`Typography updated! Applied "${matchedFont}" font family to your workspace.`);
           setMascotExpression('excited');
-        } else if (requestedPresetKey) {
-          const presetName = presetsMap[requestedPresetKey];
-          const presetBlock = blockPresets.find(p => p.name === presetName);
-          if (presetBlock) {
-            const newBlock: Block = {
-              ...presetBlock,
-              id: `b-ai-${Date.now()}`
-            };
-            updated.push(newBlock);
-            desc = `AI: Added ${presetName} Block`;
-            setSelectedBlockId(newBlock.id);
-            setMascotText(`Synthesized and inserted "${presetName}" directly into your workspace layout!`);
-            setMascotExpression('excited');
-          }
         } else if (lower.includes('dark mode') || lower.includes('dark slate') || lower.includes('deep dark') || lower.includes('dark theme')) {
           updated = blocks.map(b => ({
             ...b,
@@ -717,24 +759,41 @@ export default function BuilderView({
           setMascotText("Reset all action buttons to clean sharp architectural borders.");
           setMascotExpression('idle');
         } else {
-          // If prompt contains quotes or text edits
-          const cleanText = promptText.replace(/^(change|make|set|update|rewrite)\s+(the\s+)?(title|headline|subtitle|text|heading|copy)?\s*(to|=)?\s*/i, '').replace(/^["']|["']$/g, '');
+          // Dynamic Copy / Content update logic
+          const cleanText = promptText
+            .replace(/^(change|make|set|update|rewrite)\s+(the\s+)?(title|headline|subtitle|subheading|text|heading|copy|button)?\s*(to|=)?\s*/i, '')
+            .replace(/^["']|["']$/g, '');
+
           const targetId = selectedBlockId || (blocks.find(b => b.type === 'hero')?.id || blocks[0]?.id);
-          
+
           updated = blocks.map(b => {
             if (b.id === targetId || (b.type === 'hero' && !selectedBlockId)) {
+              const newContentData = { ...b.data };
+
+              if (matchedTopic && topicImages[matchedTopic]) {
+                newContentData.placeholderImage = topicImages[matchedTopic];
+              }
+
+              if (isSubtitleEdit) {
+                newContentData.subtitle = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+              } else if (isButtonEdit) {
+                newContentData.buttonText1 = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+              } else if (isTitleEdit || (!isSubtitleEdit && !isButtonEdit)) {
+                newContentData.title = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+                if (aiSynthesizedCopy && aiSynthesizedCopy.length > 20) {
+                  newContentData.subtitle = aiSynthesizedCopy;
+                }
+              }
+
               return {
                 ...b,
-                data: {
-                  ...b.data,
-                  title: cleanText.charAt(0).toUpperCase() + cleanText.slice(1)
-                }
+                data: newContentData
               };
             }
             return b;
           });
-          desc = "AI: Custom Copy Edit";
-          setMascotText(`Synthesized custom headline text: "${cleanText.slice(0, 40)}..."`);
+          desc = "AI: Custom Content Update";
+          setMascotText(`Applied AI update to layout: "${cleanText.slice(0, 45)}..."`);
           setMascotExpression('excited');
         }
 
@@ -746,13 +805,49 @@ export default function BuilderView({
   };
 
   // Live Publish & Deployment Streaming
-  const handlePublish = async () => {
+  const handlePublishClick = () => {
+    setDeployBusinessName(project?.name || 'My Business');
+    setDeployTagline(project?.tagline || '');
+    setDeployEmail(user?.email || project?.contactEmail || '');
+    setDeployPhone(project?.phone || '');
+    setDeployAddress(project?.address || '');
+    setDeploySubdomain((project?.name || user?.name || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+    setDeployStep('config');
     setIsPublishing(true);
+  };
+
+  const startContainerDeployment = async () => {
+    setDeployStep('deploying');
     setPublishProgress(10);
     setPublishSuccess(false);
-    setPublishingStage("Triggering live build on deployment service...");
+    setPublishingStage("Saving deployment configuration & triggering live build...");
     
     const activeId = project?.id || localStorage.getItem('activeSiteId') || 'p1';
+
+    if (project && onUpdateProject) {
+      onUpdateProject({
+        ...project,
+        name: deployBusinessName || project.name,
+        tagline: deployTagline || project.tagline,
+        phone: deployPhone || project.phone,
+        address: deployAddress || project.address,
+        contactEmail: deployEmail || project.contactEmail
+      });
+    }
+
+    try {
+      await client.sites.update(activeId, {
+        name: deployBusinessName || project?.name || 'My Site',
+        config: {
+          tagline: deployTagline,
+          contactEmail: deployEmail,
+          phone: deployPhone,
+          address: deployAddress
+        }
+      });
+    } catch (err) {
+      console.warn('Site config save fallback:', err);
+    }
 
     try {
       const deployRes = await client.deploy.trigger({ siteId: activeId });
@@ -767,16 +862,18 @@ export default function BuilderView({
         onDone: () => {
           setPublishProgress(100);
           setPublishSuccess(true);
-          const domainPrefix = (user.name || 'site').toLowerCase().replace(/\s+/g, '-');
-          setPublishedUrl(`https://${domainPrefix}-app.tridop.site`);
+          setDeployStep('done');
+          const cleanSubdomain = (deploySubdomain || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          setPublishedUrl(`https://${cleanSubdomain}.tridop.site`);
           setMascotText("Whoa! Your project is live! Full-stack container sandbox successfully deployed.");
           setMascotExpression('excited');
         },
         onError: () => {
           setPublishProgress(100);
           setPublishSuccess(true);
-          const domainPrefix = (user.name || 'site').toLowerCase().replace(/\s+/g, '-');
-          setPublishedUrl(`https://${domainPrefix}-app.tridop.site`);
+          setDeployStep('done');
+          const cleanSubdomain = (deploySubdomain || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          setPublishedUrl(`https://${cleanSubdomain}.tridop.site`);
         }
       });
     } catch (err) {
@@ -784,8 +881,9 @@ export default function BuilderView({
       setTimeout(() => {
         setPublishProgress(100);
         setPublishSuccess(true);
-        const domainPrefix = (user.name || 'site').toLowerCase().replace(/\s+/g, '-');
-        setPublishedUrl(`https://${domainPrefix}-app.tridop.site`);
+        setDeployStep('done');
+        const cleanSubdomain = (deploySubdomain || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        setPublishedUrl(`https://${cleanSubdomain}.tridop.site`);
         setMascotText("Your site blueprint is published to sandbox!");
         setMascotExpression('excited');
       }, 1500);
@@ -886,8 +984,8 @@ export default function BuilderView({
         {/* Compile / Publish Button */}
         <div className="flex items-center gap-2">
           <button
-            onClick={handlePublish}
-            className="px-4 py-1.5 bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-300 hover:to-purple-400 text-slate-950 rounded-lg text-xs font-semibold shadow-[0_0_12px_rgba(34,211,238,0.25)] flex items-center gap-1.5 transition-all"
+            onClick={handlePublishClick}
+            className="px-4 py-1.5 bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-300 hover:to-purple-400 text-slate-950 rounded-lg text-xs font-semibold shadow-[0_0_12px_rgba(34,211,238,0.25)] flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5 stroke-[2.5px]" /> Publish App
           </button>
@@ -1055,9 +1153,53 @@ export default function BuilderView({
                       return <span>{logoData}</span>;
                     };
 
+                    const resolveColorToHex = (colorVal?: string, defaultHex = '#06b6d4'): string => {
+                      if (!colorVal) return defaultHex;
+                      if (colorVal.startsWith('#') || colorVal.startsWith('rgb') || colorVal.startsWith('hsl')) {
+                        return colorVal;
+                      }
+                      const colorMap: Record<string, string> = {
+                        red: '#ef4444',
+                        rose: '#f43f5e',
+                        blue: '#3b82f6',
+                        cyan: '#06b6d4',
+                        purple: '#a855f7',
+                        violet: '#8b5cf6',
+                        green: '#22c55e',
+                        emerald: '#10b981',
+                        amber: '#f59e0b',
+                        orange: '#f97316',
+                        pink: '#ec4899',
+                        yellow: '#eab308',
+                        indigo: '#6366f1',
+                        teal: '#14b8a6',
+                        slate: '#64748b'
+                      };
+                      return colorMap[colorVal.toLowerCase()] || defaultHex;
+                    };
+
                     const getBtnStyle = (styles: any) => {
-                      const color = styles?.primaryColor || (styles?.accent?.startsWith('#') || styles?.accent?.startsWith('rgb') ? styles?.accent : null);
-                      return color ? { backgroundColor: color, color: '#ffffff' } : undefined;
+                      const pri = styles?.primaryColor || (styles?.accent?.startsWith('#') || styles?.accent?.startsWith('rgb') ? styles?.accent : null);
+                      const hex = resolveColorToHex(pri, '#06b6d4');
+                      return { backgroundColor: hex, color: '#ffffff', border: 'none' };
+                    };
+
+                    const getSecondaryBtnStyle = (styles: any) => {
+                      const sec = styles?.secondaryColor || styles?.primaryColor;
+                      const hex = resolveColorToHex(sec, '#a855f7');
+                      return { borderColor: hex, color: hex, backgroundColor: 'transparent' };
+                    };
+
+                    const getAccentTextStyle = (styles: any) => {
+                      const color = styles?.secondaryColor || styles?.primaryColor;
+                      const hex = resolveColorToHex(color, '#06b6d4');
+                      return { color: hex };
+                    };
+
+                    const getAccentBgStyle = (styles: any) => {
+                      const color = styles?.primaryColor || styles?.secondaryColor;
+                      const hex = resolveColorToHex(color, '#06b6d4');
+                      return { backgroundColor: `${hex}1f`, borderColor: `${hex}40`, color: hex };
                     };
 
                     const getBlockBgStyle = (styles: any) => {
@@ -1145,7 +1287,7 @@ export default function BuilderView({
                                 ))}
                               </div>
                               {block.data.buttonText1 && (
-                                <button style={getBtnStyle(block.styles)} className={`px-4 py-1.5 text-xs font-semibold ${block.styles.accent} ${btnClass}`}>
+                                <button style={getBtnStyle(block.styles)} className={`px-4 py-1.5 text-xs font-semibold ${btnClass}`}>
                                   {block.data.buttonText1}
                                 </button>
                               )}
@@ -1164,11 +1306,11 @@ export default function BuilderView({
                                   {block.data.subtitle}
                                 </p>
                                 <div className={`flex items-center gap-3 ${block.data.placeholderImage ? 'justify-start' : 'justify-center'}`}>
-                                  <button style={getBtnStyle(block.styles)} className={`px-5 py-2.5 text-xs font-bold ${block.styles.accent} ${btnClass} transition-all`}>
+                                  <button style={getBtnStyle(block.styles)} className={`px-5 py-2.5 text-xs font-bold ${btnClass} transition-all`}>
                                     {block.data.buttonText1}
                                   </button>
                                   {block.data.buttonText2 && (
-                                    <button className={`px-5 py-2.5 text-xs font-semibold border transition-all ${btnClass} ${isBgLight ? 'border-slate-200 text-slate-700 hover:bg-slate-50' : 'border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'}`}>
+                                    <button style={getSecondaryBtnStyle(block.styles)} className={`px-5 py-2.5 text-xs font-semibold border transition-all ${btnClass}`}>
                                       {block.data.buttonText2}
                                     </button>
                                   )}
@@ -1191,8 +1333,8 @@ export default function BuilderView({
                           {block.type === 'content' && (
                             <div className="px-6 md:px-12 max-w-7xl mx-auto space-y-10">
                               <div className="text-center space-y-2">
-                                <h2 className={`text-2xl md:text-3xl font-extrabold tracking-tight ${titleColorClass}`}>{block.data.title}</h2>
-                                <p className={`text-xs md:text-sm max-w-xl mx-auto ${subtitleColorClass}`}>{block.data.subtitle}</p>
+                                <h2 style={getTitleStyle(block.styles)} className={`text-2xl md:text-3xl font-extrabold tracking-tight ${titleColorClass}`}>{block.data.title}</h2>
+                                <p style={getSubtitleStyle(block.styles)} className={`text-xs md:text-sm max-w-xl mx-auto ${subtitleColorClass}`}>{block.data.subtitle}</p>
                               </div>
 
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
@@ -1200,18 +1342,18 @@ export default function BuilderView({
                                   <div key={idx} className={`p-5 rounded-xl border space-y-3 ${innerCardClass}`}>
                                     
                                     {item.metric && (
-                                      <div className="text-3xl font-black font-mono text-cyan-500">{item.metric}</div>
+                                      <div style={getAccentTextStyle(block.styles)} className="text-3xl font-black font-mono text-cyan-500">{item.metric}</div>
                                     )}
 
                                     {!item.metric && (
-                                      <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-500 font-bold">
+                                      <div style={getAccentBgStyle(block.styles)} className="w-8 h-8 rounded-lg border flex items-center justify-center font-bold">
                                         ⚡
                                       </div>
                                     )}
 
                                     <div className="space-y-1">
-                                      <h4 className={`text-sm font-semibold ${titleColorClass}`}>{item.title}</h4>
-                                      <p className={`text-[11px] leading-relaxed ${subtitleColorClass}`}>{item.desc}</p>
+                                      <h4 style={getTitleStyle(block.styles)} className={`text-sm font-semibold ${titleColorClass}`}>{item.title}</h4>
+                                      <p style={getSubtitleStyle(block.styles)} className={`text-[11px] leading-relaxed ${subtitleColorClass}`}>{item.desc}</p>
                                     </div>
                                   </div>
                                 ))}
@@ -1226,9 +1368,9 @@ export default function BuilderView({
                                 <img src={block.data.placeholderImage} alt="Media highlight" className="w-full h-auto object-cover" referrerPolicy="no-referrer" />
                               </div>
                               <div className="space-y-4">
-                                <h2 className={`text-2xl md:text-3xl font-extrabold tracking-tight leading-snug ${titleColorClass}`}>{block.data.title}</h2>
-                                <p className={`text-xs md:text-sm leading-relaxed ${subtitleColorClass}`}>{block.data.subtitle}</p>
-                                <button style={getBtnStyle(block.styles)} className={`px-5 py-2 rounded-lg text-xs font-semibold ${block.styles.accent} ${btnClass}`}>
+                                <h2 style={getTitleStyle(block.styles)} className={`text-2xl md:text-3xl font-extrabold tracking-tight leading-snug ${titleColorClass}`}>{block.data.title}</h2>
+                                <p style={getSubtitleStyle(block.styles)} className={`text-xs md:text-sm leading-relaxed ${subtitleColorClass}`}>{block.data.subtitle}</p>
+                                <button style={getBtnStyle(block.styles)} className={`px-5 py-2 rounded-lg text-xs font-semibold ${btnClass}`}>
                                   Learn More
                                 </button>
                               </div>
@@ -1239,15 +1381,15 @@ export default function BuilderView({
                           {block.type === 'socialProof' && (
                             <div className="px-6 md:px-12 max-w-7xl mx-auto space-y-8">
                               <div className="text-center">
-                                <h3 className={`text-xl font-bold ${titleColorClass}`}>{block.data.title}</h3>
+                                <h3 style={getTitleStyle(block.styles)} className={`text-xl font-bold ${titleColorClass}`}>{block.data.title}</h3>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {block.data.items?.map((item, idx) => (
                                   <div key={idx} className={`p-6 rounded-2xl border flex flex-col justify-between min-h-[140px] ${innerCardClass}`}>
-                                    <p className={`text-xs italic leading-relaxed ${subtitleColorClass}`}>"{item.desc}"</p>
+                                    <p style={getSubtitleStyle(block.styles)} className={`text-xs italic leading-relaxed ${subtitleColorClass}`}>"{item.desc}"</p>
                                     <div className={`flex items-center gap-2 pt-4 border-t mt-4 ${borderClass}`}>
-                                      <div className="w-6 h-6 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[10px] text-cyan-600 font-bold">👤</div>
-                                      <span className={`text-[11px] font-semibold ${titleColorClass}`}>{item.title}</span>
+                                      <div style={getAccentBgStyle(block.styles)} className="w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold">👤</div>
+                                      <span style={getTitleStyle(block.styles)} className={`text-[11px] font-semibold ${titleColorClass}`}>{item.title}</span>
                                     </div>
                                   </div>
                                 ))}
@@ -1258,17 +1400,17 @@ export default function BuilderView({
                           {/* 6. FORMS / CTA SIGNUP */}
                           {block.type === 'cta' && (
                             <div className="px-6 md:px-12 max-w-4xl mx-auto text-center space-y-6">
-                              <h2 className={`text-2xl md:text-3xl font-extrabold tracking-tight ${titleColorClass}`}>{block.data.title}</h2>
-                              <p className={`text-xs md:text-sm max-w-xl mx-auto leading-relaxed ${subtitleColorClass}`}>{block.data.subtitle}</p>
+                              <h2 style={getTitleStyle(block.styles)} className={`text-2xl md:text-3xl font-extrabold tracking-tight ${titleColorClass}`}>{block.data.title}</h2>
+                              <p style={getSubtitleStyle(block.styles)} className={`text-xs md:text-sm max-w-xl mx-auto leading-relaxed ${subtitleColorClass}`}>{block.data.subtitle}</p>
                               
                               <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-2">
                                 <input
                                   type="text"
                                   placeholder={block.data.formPlaceholder || 'Enter your email'}
                                   disabled
-                                  className={`flex-1 px-4 py-2 text-xs rounded-lg border focus:outline-none focus:border-cyan-500 ${inputBgClass}`}
+                                  className={`flex-1 px-4 py-2 text-xs rounded-lg border focus:outline-none ${inputBgClass}`}
                                 />
-                                <button style={getBtnStyle(block.styles)} className={`px-5 py-2 text-xs font-bold whitespace-nowrap ${block.styles.accent} ${btnClass}`}>
+                                <button style={getBtnStyle(block.styles)} className={`px-5 py-2 text-xs font-bold whitespace-nowrap ${btnClass}`}>
                                   {block.data.buttonText1}
                                 </button>
                               </div>
@@ -1278,8 +1420,8 @@ export default function BuilderView({
                           {/* 7. FOOTER */}
                           {block.type === 'footer' && (
                             <div className="px-6 md:px-12 max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs">
-                              <span className={`font-extrabold ${titleColorClass}`}>{renderBrandLogo(block.data.logo)}</span>
-                              <p className={`text-[11px] ${subtitleColorClass}`}>{block.data.copyright}</p>
+                              <span style={getTitleStyle(block.styles)} className={`font-extrabold ${titleColorClass}`}>{renderBrandLogo(block.data.logo)}</span>
+                              <p style={getSubtitleStyle(block.styles)} className={`text-[11px] ${subtitleColorClass}`}>{block.data.copyright}</p>
                             </div>
                           )}
 
@@ -1712,6 +1854,69 @@ export default function BuilderView({
                       </button>
                     </div>
 
+                    {/* Primary Brand Identity Color */}
+                    <div className="space-y-2 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                      <label className="text-[10px] font-mono text-slate-400 flex justify-between items-center">
+                        <span>Primary Brand Color</span>
+                        <span className="text-cyan-400 font-mono text-[10px] font-bold">
+                          {active.styles.primaryColor || '#06b6d4'}
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-700 shrink-0 cursor-pointer">
+                          <input
+                            type="color"
+                            value={active.styles.primaryColor || '#06b6d4'}
+                            onChange={(e) => {
+                              const newHex = e.target.value;
+                              handleStyleChange('primaryColor', newHex);
+                              handleStyleChange('accent', newHex);
+                            }}
+                            className="absolute -inset-2 w-12 h-12 cursor-pointer bg-transparent border-0"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="#06b6d4 or Cyan"
+                          value={active.styles.primaryColor || ''}
+                          onChange={(e) => {
+                            handleStyleChange('primaryColor', e.target.value);
+                            handleStyleChange('accent', e.target.value);
+                          }}
+                          className="flex-1 px-3 py-1 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Secondary Brand Identity Color */}
+                    <div className="space-y-2 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                      <label className="text-[10px] font-mono text-slate-400 flex justify-between items-center">
+                        <span>Secondary Brand Color</span>
+                        <span className="text-purple-400 font-mono text-[10px] font-bold">
+                          {active.styles.secondaryColor || '#a855f7'}
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-700 shrink-0 cursor-pointer">
+                          <input
+                            type="color"
+                            value={active.styles.secondaryColor || '#a855f7'}
+                            onChange={(e) => {
+                              handleStyleChange('secondaryColor', e.target.value);
+                            }}
+                            className="absolute -inset-2 w-12 h-12 cursor-pointer bg-transparent border-0"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="#a855f7 or Purple"
+                          value={active.styles.secondaryColor || ''}
+                          onChange={(e) => handleStyleChange('secondaryColor', e.target.value)}
+                          className="flex-1 px-3 py-1 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+
                   </div>
 
                 </div>
@@ -1798,7 +2003,120 @@ export default function BuilderView({
               className="max-w-md w-full glass-panel border-cyan-500/20 p-6 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.8)] space-y-6"
             >
               
-              {!publishSuccess ? (
+              {deployStep === 'config' ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">Deployment & Business Profile</h3>
+                        <p className="text-[10px] text-cyan-400 font-mono">DEPLOYMENT PHASE CONFIGURATION</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setIsPublishing(false)}
+                      className="text-slate-500 hover:text-white p-1 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-cyan-950/30 border border-cyan-500/20 rounded-xl text-xs text-cyan-300 flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <span>Enter or customize your business details for live deployment, or click Quick Deploy to launch instantly with default settings.</span>
+                  </div>
+
+                  <div className="space-y-3 text-left max-h-[300px] overflow-y-auto pr-1">
+                    <div>
+                      <label className="text-[11px] font-mono text-slate-400 block mb-1">BUSINESS / PROJECT NAME</label>
+                      <input
+                        type="text"
+                        value={deployBusinessName}
+                        onChange={(e) => setDeployBusinessName(e.target.value)}
+                        placeholder="e.g. Zippy Food Labs"
+                        className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-mono text-slate-400 block mb-1">TAGLINE / HEADLINE</label>
+                      <input
+                        type="text"
+                        value={deployTagline}
+                        onChange={(e) => setDeployTagline(e.target.value)}
+                        placeholder="e.g. Gourmet meals delivered by cryogenic drones"
+                        className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[11px] font-mono text-slate-400 block mb-1">CONTACT EMAIL</label>
+                        <input
+                          type="email"
+                          value={deployEmail}
+                          onChange={(e) => setDeployEmail(e.target.value)}
+                          placeholder="contact@business.com"
+                          className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-mono text-slate-400 block mb-1">PHONE NUMBER</label>
+                        <input
+                          type="text"
+                          value={deployPhone}
+                          onChange={(e) => setDeployPhone(e.target.value)}
+                          placeholder="+1 (555) 019-2831"
+                          className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-mono text-slate-400 block mb-1">BUSINESS ADDRESS / LOCATION</label>
+                      <input
+                        type="text"
+                        value={deployAddress}
+                        onChange={(e) => setDeployAddress(e.target.value)}
+                        placeholder="e.g. San Francisco, CA"
+                        className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-mono text-slate-400 block mb-1">LIVE SUBDOMAIN / URL</label>
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs">
+                        <span className="text-slate-500 font-mono text-[11px]">https://</span>
+                        <input
+                          type="text"
+                          value={deploySubdomain}
+                          onChange={(e) => setDeploySubdomain(e.target.value)}
+                          placeholder="my-awesome-app"
+                          className="flex-1 bg-transparent text-cyan-400 font-mono text-xs outline-none px-1"
+                        />
+                        <span className="text-slate-500 font-mono text-[11px]">.tridop.site</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
+                    <button
+                      onClick={startContainerDeployment}
+                      className="flex-1 py-2.5 bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-300 hover:to-purple-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 fill-slate-950" /> Confirm & Deploy Live 🚀
+                    </button>
+                    <button
+                      onClick={startContainerDeployment}
+                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-xs rounded-xl border border-slate-800 transition-all cursor-pointer"
+                    >
+                      Quick Deploy
+                    </button>
+                  </div>
+                </div>
+              ) : !publishSuccess ? (
                 <div className="space-y-5 text-center">
                   <div className="flex justify-center">
                     <div className="w-12 h-12 rounded-full border border-slate-800 bg-slate-900 flex items-center justify-center text-cyan-400">
