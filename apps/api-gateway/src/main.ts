@@ -14,13 +14,9 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // CORS — allow Vite dev server, Next.js, and configured origins
-  const allowedOrigins = process.env.ALLOWED_ORIGIN
-    ? process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim())
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173'];
-
+  // CORS — allow requests from Swagger UI, frontend apps, and configured origins
   app.enableCors({
-    origin: allowedOrigins,
+    origin: true,
     credentials: true,
   });
 
@@ -29,15 +25,21 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   );
 
-  // Swagger — aggregated OpenAPI doc
+  // Swagger — aggregated OpenAPI doc with relative base server URL
   const config = new DocumentBuilder()
     .setTitle('TridopAI API')
     .setDescription('TridopAI platform API — all services proxied through this gateway')
     .setVersion('1.0')
     .addBearerAuth()
+    .addServer('/')
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   // Root endpoint for platform overview
   app.getHttpAdapter().get('/', (_req, res) => {
