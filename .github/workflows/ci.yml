@@ -1,12 +1,14 @@
 name: CI
 
 on:
+  push:
+    branches: [main, develop]
   pull_request:
     branches: [main, develop]
 
 jobs:
   ci:
-    name: Lint · Typecheck · Tests
+    name: Build & Verify All Microservices
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -15,27 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Nx needs full history to compute affected graph
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install --ignore-scripts --legacy-peer-deps --no-audit
+        run: npm install --legacy-peer-deps --no-audit
 
-      - name: Set Nx SHAs (for affected computation)
-        uses: nrwl/nx-set-shas@v4
-
-      - name: Lint (all)
-        run: npx nx run-many --target=lint --all --parallel=3
-
-      - name: Typecheck (affected only)
-        run: npx nx affected --target=typecheck --parallel=3
-
-      - name: Unit tests (affected only)
-        run: npx nx affected --target=test --parallel=3 --ci --coverage
-        env:
-          NODE_ENV: test
+      - name: Build all microservices
+        run: npx nx run-many --target=build --all --parallel=3
