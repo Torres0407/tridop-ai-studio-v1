@@ -39,6 +39,16 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
+  // Root endpoint for platform overview
+  app.getHttpAdapter().get('/', (_req, res) => {
+    res.status(200).json({
+      service: 'TridopAI API Gateway',
+      status: 'online',
+      docs: '/api',
+      health: '/health',
+    });
+  });
+
   // Health endpoint on the gateway itself
   app.getHttpAdapter().get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok', service: 'api-gateway' });
