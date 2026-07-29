@@ -10,8 +10,29 @@ permissions:
   packages: write
 
 jobs:
+  verify:
+    name: 🛡️ Verify All Microservices Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit
+
+      - name: Build all microservices
+        run: npx nx run-many --target=build --all --parallel=3
+
   build-and-push:
-    name: Build & Push Docker Image
+    name: 🚀 Build & Push Docker Image
+    needs: verify
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
