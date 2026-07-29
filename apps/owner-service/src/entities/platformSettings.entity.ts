@@ -2,8 +2,8 @@ import { Entity, PrimaryColumn, Column, UpdateDateColumn } from 'typeorm';
 
 @Entity('platform_settings', { schema: 'owner' })
 export class PlatformSettingsEntity {
-  @PrimaryColumn()
-  id = 'global';
+  @PrimaryColumn({ type: 'varchar', default: 'global' })
+  id: string;
 
   @Column({ default: false })
   killSwitchActive: boolean;
