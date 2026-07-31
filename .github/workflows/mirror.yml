@@ -24,6 +24,8 @@ jobs:
           TARGET_REPO_URL_1: ${{ secrets.PERSONAL_REPO_URL }}
           PAT_TOKEN_2: ${{ secrets.SECOND_ACCESS_TOKEN }}
           TARGET_REPO_URL_2: ${{ secrets.SECOND_REPO_URL }}
+          PAT_TOKEN_3: ${{ secrets.THIRD_ACCESS_TOKEN }}
+          TARGET_REPO_URL_3: ${{ secrets.THIRD_REPO_URL }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
