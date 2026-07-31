@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
@@ -37,10 +37,12 @@ function parseUpstashRedisOptions(urlStr?: string) {
     const u = new URL(urlStr);
     const isUpstashOrTls = u.protocol === 'rediss:' || u.hostname.includes('upstash.io');
     const config: any = {
-      host: u.hostname || 'redis',
+      host: u.hostname || 'localhost',
       port: Number(u.port) || 6379,
-      maxRetriesPerRequest: null,
       family: 4,
+      maxRetriesPerRequest: null,
+      connectTimeout: 10000,
+      enableOfflineQueue: false,
     };
     if (u.password) config.password = decodeURIComponent(u.password);
     if (u.username) config.username = decodeURIComponent(u.username);
@@ -59,8 +61,9 @@ function parseUpstashRedisOptions(urlStr?: string) {
 
     // Postgres — schema: identity only
     TypeOrmModule.forRootAsync({
-      useFactory: async () => {
-        const dbUrl = process.env.IDENTITY_POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=identity';
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => {
+        const dbUrl = config.get<string>('IDENTITY_POSTGRES_URL') || config.get<string>('DATABASE_URL') || 'postgresql://tridopai:tridopai@postgres:5432/tridopai?schema=identity';
         await ensureSchemaExists(dbUrl, 'identity');
         return {
           type: 'postgres',
@@ -70,22 +73,29 @@ function parseUpstashRedisOptions(urlStr?: string) {
           retryAttempts: 5,
         };
       },
+      inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([UserEntity, SessionEntity]),
 
     // MongoDB — database: identity_db only
     MongooseModule.forRootAsync({
-      useFactory: () => ({
-        uri: process.env.MONGODB_URI || process.env.MONGO_URL || 'mongodb://mongodb:27017/identity_db',
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get<string>('MONGODB_URI') || config.get<string>('MONGO_URL') || 'mongodb://mongodb:27017/identity_db',
       }),
+      inject: [ConfigService],
     }),
     MongooseModule.forFeature([
       { name: BusinessProfile.name, schema: BusinessProfileSchema },
     ]),
 
-    // BullMQ — publishes USER_CREATED (configured for Upstash Redis)
-    BullModule.forRoot({
-      connection: parseUpstashRedisOptions(process.env.REDIS_URL),
+    // BullMQ — publishes USER_CREATED (configured for Upstash Redis dynamically)
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        connection: parseUpstashRedisOptions(config.get<string>('REDIS_URL')),
+      }),
+      inject: [ConfigService],
     }),
     BullModule.registerQueue({
       name: EVENT_NAMES.USER_CREATED,

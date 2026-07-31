@@ -2,6 +2,22 @@ import 'reflect-metadata';
 import { initTracing } from '@libs/common';
 initTracing('api-gateway');
 
+process.on('uncaughtException', (err: any) => {
+  if (err?.message?.includes('Redis') || err?.message?.includes('max retries') || err?.code === 'ECONNREFUSED') {
+    console.warn('[api-gateway] Redis microservice transport offline:', err.message);
+    return;
+  }
+  console.error('[api-gateway] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason: any) => {
+  if (reason?.message?.includes('Redis') || reason?.message?.includes('max retries') || reason?.code === 'ECONNREFUSED') {
+    console.warn('[api-gateway] Redis microservice transport unhandled rejection:', reason?.message || reason);
+    return;
+  }
+  console.error('[api-gateway] Unhandled Rejection:', reason);
+});
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -14,13 +30,9 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // CORS — allow Vite dev server, Next.js, and configured origins
-  const allowedOrigins = process.env.ALLOWED_ORIGIN
-    ? process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim())
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173'];
-
+  // CORS — allow requests from Swagger UI, frontend apps, and configured origins
   app.enableCors({
-    origin: allowedOrigins,
+    origin: true,
     credentials: true,
   });
 
@@ -29,15 +41,31 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   );
 
-  // Swagger — aggregated OpenAPI doc
+  // Swagger — aggregated OpenAPI doc with relative base server URL
   const config = new DocumentBuilder()
     .setTitle('TridopAI API')
     .setDescription('TridopAI platform API — all services proxied through this gateway')
     .setVersion('1.0')
     .addBearerAuth()
+    .addServer('/')
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+
+  // Root endpoint for platform overview
+  app.getHttpAdapter().get('/', (_req, res) => {
+    res.status(200).json({
+      service: 'TridopAI API Gateway',
+      status: 'online',
+      docs: '/api',
+      health: '/health',
+    });
+  });
 
   // Health endpoint on the gateway itself
   app.getHttpAdapter().get('/health', (_req, res) => {

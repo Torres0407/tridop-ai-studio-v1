@@ -16,10 +16,10 @@ export class AiClient extends BaseServiceClient {
   getAiCost(): Promise<never> {
     return this.send('ai.cost.get', {});
   }
-  prompt(dto: { userId: string; prompt: string }) {
+  prompt(dto: { userId: string; prompt: string; model?: string }) {
     return this.send('ai.prompt', dto, { timeoutMs: 60_000 });
   }
-  generate(dto: { userId: string; siteId: string; prompt: string }) {
+  generate(dto: { userId: string; siteId: string; prompt: string; model?: string }) {
     return this.send('ai.generate', dto, { timeoutMs: 60_000 });
   }
   getGenerateStatus(jobId: string) {
@@ -31,7 +31,7 @@ export class AiClient extends BaseServiceClient {
   prefill(dto: { userId: string; businessProfile: any }) {
     return this.send('ai.prefill', dto, { timeoutMs: 60_000 });
   }
-  assistCopy(dto: { userId: string; text: string; tone?: string; instruction?: string }) {
+  assistCopy(dto: { userId: string; text: string; tone?: string; instruction?: string; model?: string }) {
     return this.send('ai.assistCopy', dto);
   }
   generateImage(dto: { userId: string; prompt: string }) {

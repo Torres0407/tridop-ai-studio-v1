@@ -244,14 +244,20 @@ export class TridopApiClient {
       return this.request<{ googleClientId: string; githubClientId: string; hasGeminiApiKey: boolean; hasPaystackSecretKey: boolean }>('/auth/config');
     },
 
-    signup: (dto: SignupPayload): Promise<AuthTokens> => {
+    signup: (nameOrDto: any, email?: string, password?: string): Promise<AuthTokens> => {
+      const dto = typeof nameOrDto === 'object' && nameOrDto !== null
+        ? nameOrDto
+        : { name: nameOrDto, email, password };
       return this.request<AuthTokens>('/auth/signup', {
         method: 'POST',
         body: JSON.stringify(dto),
       });
     },
 
-    login: (dto: LoginPayload): Promise<AuthTokens> => {
+    login: (emailOrDto: any, password?: string): Promise<AuthTokens> => {
+      const dto = typeof emailOrDto === 'object' && emailOrDto !== null
+        ? emailOrDto
+        : { email: emailOrDto, password };
       return this.request<AuthTokens>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(dto),
@@ -594,13 +600,14 @@ export class TridopApiClient {
       });
     },
 
-    assistCopy: (payload: { text: string; tone?: string; instruction?: string } | string): Promise<{ text: string }> => {
+    assistCopy: (payload: { text: string; tone?: string; instruction?: string; model?: string } | string): Promise<{ text: string }> => {
       const text = typeof payload === 'string' ? payload : payload.text;
       const tone = typeof payload === 'object' ? payload.tone : undefined;
       const instruction = typeof payload === 'object' ? payload.instruction : undefined;
+      const model = typeof payload === 'object' ? payload.model : undefined;
       return this.request<{ text: string }>('/ai/assist-copy', {
         method: 'POST',
-        body: JSON.stringify({ text, tone, instruction }),
+        body: JSON.stringify({ text, tone, instruction, model }),
       });
     },
 

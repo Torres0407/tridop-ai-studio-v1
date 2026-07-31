@@ -7,10 +7,8 @@ import { IdempotencyModule } from '@libs/common';
 
 import { DomainsController } from './domains.controller';
 import { ProvisionSubdomain } from './subdomain/provisionSubdomain';
-import { SpaceshipRegistrar } from './registrar/spaceship';
 import { DynadotRegistrar } from './registrar/dynadot';
-import { CloudflareTransferJob } from './registrar/cloudflareTransfer';
-import { CloudflareForSaaS } from './cloudflareForSaaS';
+import { NativeDomainManager } from './nativeDomainManager';
 import { DomainLookup } from './domainLookup';
 import { VelocityCheck } from './fraud/velocityCheck';
 import { SubscriptionLapsedConsumer } from './events/subscriptionLapsed.consumer';
@@ -30,6 +28,31 @@ async function ensureSchemaExists(url: string, schemaName: string) {
     console.warn(`[TypeOrm] Could not pre-create schema "${schemaName}":`, err);
   }
 }
+
+function parseUpstashRedisOptions(urlStr?: string) {
+  if (!urlStr) return { host: 'localhost', port: 6379 };
+  try {
+    const u = new URL(urlStr);
+    const isUpstashOrTls = u.protocol === 'rediss:' || u.hostname.includes('upstash.io');
+    const config: any = {
+      host: u.hostname || 'localhost',
+      port: Number(u.port) || 6379,
+      family: 4,
+      retryStrategy: () => 1000,
+      enableOfflineQueue: false,
+    };
+    if (u.password) config.password = decodeURIComponent(u.password);
+    if (u.username) config.username = decodeURIComponent(u.username);
+    if (isUpstashOrTls) {
+      config.tls = { rejectUnauthorized: false };
+    }
+    return config;
+  } catch {
+    return { host: 'localhost', port: 6379 };
+  }
+}
+
+const REDIS_OPTIONS = parseUpstashRedisOptions(process.env.REDIS_URL);
 
 @Module({
   imports: [
@@ -56,10 +79,7 @@ async function ensureSchemaExists(url: string, schemaName: string) {
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        connection: {
-          host: new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').hostname,
-          port: Number(new URL(config.get<string>('REDIS_URL') || 'redis://redis:6379').port) || 6379,
-        },
+        connection: REDIS_OPTIONS,
       }),
       inject: [ConfigService],
     }),
@@ -68,10 +88,8 @@ async function ensureSchemaExists(url: string, schemaName: string) {
   controllers: [DomainsController, HealthController],
   providers: [
     ProvisionSubdomain,
-    SpaceshipRegistrar,
     DynadotRegistrar,
-    CloudflareTransferJob,
-    CloudflareForSaaS,
+    NativeDomainManager,
     DomainLookup,
     VelocityCheck,
     SubscriptionLapsedConsumer,

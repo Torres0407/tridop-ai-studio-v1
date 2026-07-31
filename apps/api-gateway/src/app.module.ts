@@ -48,7 +48,15 @@ import { OwnerProxy } from './proxy/owner.proxy';
 import { SeoProxy } from './proxy/seo.proxy';
 
 function parseUpstashRedisOptions(urlStr?: string) {
-  if (!urlStr) return { host: 'localhost', port: 6379 };
+  const defaultOpts: any = {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: Number(process.env.REDIS_PORT) || 6379,
+    retryAttempts: 3,
+    retryDelay: 3000,
+    maxRetriesPerRequest: null,
+    enableOfflineQueue: false,
+  };
+  if (!urlStr) return defaultOpts;
   try {
     const u = new URL(urlStr);
     const isUpstashOrTls = u.protocol === 'rediss:' || u.hostname.includes('upstash.io');
@@ -56,7 +64,9 @@ function parseUpstashRedisOptions(urlStr?: string) {
       host: u.hostname || 'localhost',
       port: Number(u.port) || 6379,
       family: 4,
-      retryStrategy: () => 1000,
+      retryAttempts: 3,
+      retryDelay: 3000,
+      maxRetriesPerRequest: null,
       enableOfflineQueue: false,
     };
     if (u.password) config.password = decodeURIComponent(u.password);
@@ -66,7 +76,7 @@ function parseUpstashRedisOptions(urlStr?: string) {
     }
     return config;
   } catch {
-    return { host: 'localhost', port: 6379 };
+    return defaultOpts;
   }
 }
 
@@ -76,10 +86,10 @@ const REDIS_OPTIONS = parseUpstashRedisOptions(process.env.REDIS_URL);
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // Rate limiting — tighter on AI routes (set per-route via ThrottlerGuard)
+    // Rate limiting — generous limits for gateway proxies
     ThrottlerModule.forRoot([
-      { name: 'default', ttl: 60_000, limit: 100 },
-      { name: 'ai', ttl: 60_000, limit: 20 },
+      { name: 'default', ttl: 60_000, limit: 10000 },
+      { name: 'ai', ttl: 60_000, limit: 1000 },
     ]),
 
     // Register all 10 ClientProxy instances — one per downstream service via Redis

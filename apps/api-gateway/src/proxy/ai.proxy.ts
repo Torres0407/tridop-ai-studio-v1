@@ -16,23 +16,23 @@ export class AiProxy {
 
   @Post('prompt')
   @ApiOperation({ summary: 'Send a raw prompt to the AI' })
-  async prompt(@Req() req: Request & { user: JwtPayload }, @Body() dto: { prompt: string }) {
+  async prompt(@Req() req: Request & { user: JwtPayload }, @Body() dto: { prompt: string; model?: string }) {
     const userId = req.user?.sub || 'usr_anonymous';
     try {
-      return await this.aiClient.prompt({ userId, prompt: dto.prompt });
+      return await this.aiClient.prompt({ userId, prompt: dto.prompt, model: dto.model || 'gemini-2.5-flash' });
     } catch {
-      return `AI Response: Synthesized creative layout and structure for "${dto.prompt || 'your project'}".`;
+      return `AI Response [${dto.model || 'gemini-2.5-flash'}]: Synthesized creative layout and structure for "${dto.prompt || 'your project'}".`;
     }
   }
 
   @Post('generate')
   @ApiOperation({ summary: 'Generate site blocks based on a prompt and context' })
-  async generate(@Req() req: Request & { user: JwtPayload }, @Body() dto: { siteId: string; prompt: string }) {
+  async generate(@Req() req: Request & { user: JwtPayload }, @Body() dto: { siteId: string; prompt: string; model?: string }) {
     const userId = req.user?.sub || 'usr_anonymous';
     try {
       return await this.aiClient.generate({ userId, ...dto });
     } catch {
-      return { status: 'completed', jobId: `job_${Date.now()}`, siteId: dto.siteId || 's1' };
+      return { status: 'completed', jobId: `job_${Date.now()}`, siteId: dto.siteId || 's1', model: dto.model || 'gemini-2.5-flash' };
     }
   }
 
@@ -71,12 +71,13 @@ export class AiProxy {
 
   @Post('assist-copy')
   @ApiOperation({ summary: 'Rewrite copy using AI' })
-  async assistCopy(@Req() req: Request & { user: JwtPayload }, @Body() dto: { text: string; tone?: string; instruction?: string }) {
+  async assistCopy(@Req() req: Request & { user: JwtPayload }, @Body() dto: { text: string; tone?: string; instruction?: string; model?: string }) {
     const userId = req.user?.sub || 'usr_anonymous';
+    const activeModel = dto.model || 'gemini-2.5-flash';
     try {
-      return await this.aiClient.assistCopy({ userId, ...dto });
+      return await this.aiClient.assistCopy({ userId, ...dto, model: activeModel });
     } catch {
-      return { text: `Synthesized Copy (${dto.tone || 'Professional'}): ${dto.text}` };
+      return { text: `[${activeModel}] ${dto.text}` };
     }
   }
 

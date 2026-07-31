@@ -12,6 +12,7 @@ import BuilderView from './components/BuilderView';
 import ProjectHistoryView from './components/ProjectHistoryView';
 import BillingView from './components/BillingView';
 import OwnerAdminView from './components/OwnerAdminView';
+import { PreviewView } from './components/PreviewView';
 import { User, Project, Block } from './types';
 import { ChevronDown, Sparkles, UserCheck, Play, Layers } from 'lucide-react';
 import { client } from './lib/client';
@@ -41,28 +42,67 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
   const footerBg = isDark ? 'bg-slate-950 border-t border-slate-900' : 'bg-white border-t border-slate-100';
   const footerText = isDark ? 'text-slate-500' : 'text-slate-400';
 
-  // Use uploaded logo or hero image if provided, else fallback to category image
+  // Build comprehensive topic detection string
+  const fullTopic = `${data.businessType || ''} ${data.customBusinessType || ''} ${data.businessName || ''} ${data.tagline || ''}`.toLowerCase();
+
+  // Determine topic-matched hero image
   let heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&auto=format&fit=crop&q=60';
-  if (data.businessType === 'restaurant') {
-    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60';
-  } else if (data.businessType === 'salon') {
+  if (fullTopic.includes('feet') || fullTopic.includes('foot') || fullTopic.includes('podiatry') || fullTopic.includes('pedicure') || fullTopic.includes('shoe')) {
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1519415510236-718bdfcd8960?w=800&auto=format&fit=crop&q=60';
+  } else if (fullTopic.includes('salon') || fullTopic.includes('beauty') || fullTopic.includes('hair') || fullTopic.includes('barber') || fullTopic.includes('spa') || fullTopic.includes('massage')) {
     heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60';
-  } else if (data.businessType === 'retail') {
+  } else if (fullTopic.includes('restaurant') || fullTopic.includes('pizza') || fullTopic.includes('food') || fullTopic.includes('dining') || fullTopic.includes('cafe')) {
+    heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60';
+  } else if (fullTopic.includes('retail') || fullTopic.includes('store') || fullTopic.includes('shop') || fullTopic.includes('fashion') || fullTopic.includes('clothing')) {
     heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&auto=format&fit=crop&q=60';
-  } else if (data.businessType === 'fitness') {
+  } else if (fullTopic.includes('fitness') || fullTopic.includes('gym') || fullTopic.includes('workout') || fullTopic.includes('sports')) {
     heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=60';
-  } else if (data.businessType === 'healthcare') {
+  } else if (fullTopic.includes('health') || fullTopic.includes('clinic') || fullTopic.includes('doctor') || fullTopic.includes('medical') || fullTopic.includes('hospital') || fullTopic.includes('wellness')) {
     heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=800&auto=format&fit=crop&q=60';
-  } else if (data.businessType === 'agency') {
+  } else if (fullTopic.includes('agency') || fullTopic.includes('marketing') || fullTopic.includes('design') || fullTopic.includes('media')) {
     heroImage = data.logoUrl || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60';
   }
 
-  // Create custom bento items based on category & brand lines
+  // Generate tailored Bento items based on business profile topic
   let bentoItems = [
     { title: 'Tailored Service', desc: data.tagline || 'Custom designed solutions fitting your precise goals.' },
     { title: 'High Performance', desc: 'Optimized speed and responsive layouts for edge networks.' },
     { title: 'Modern Security', desc: 'Protected by virtual container isolation standards.' }
   ];
+
+  if (fullTopic.includes('feet') || fullTopic.includes('foot') || fullTopic.includes('podiatry') || fullTopic.includes('pedicure')) {
+    bentoItems = [
+      { title: 'Specialized Foot Care', desc: 'Comprehensive podiatry assessments and customized care plans.' },
+      { title: 'Therapeutic Pedicures & Spa', desc: 'Soothing foot treatments combining hygiene, comfort, and relaxation.' },
+      { title: 'Custom Orthotics & Support', desc: 'Engineered arch and foot support solutions for pain-free mobility.' }
+    ];
+  } else if (fullTopic.includes('salon') || fullTopic.includes('beauty') || fullTopic.includes('spa')) {
+    bentoItems = [
+      { title: 'Luxury Styling & Cuts', desc: 'Custom hair and aesthetic treatments tailored to your personal look.' },
+      { title: 'Organic Skin & Body Care', desc: 'Nourishing botanical formulas for healthy, glowing radiance.' },
+      { title: 'VIP Appointment Booking', desc: 'Seamless online scheduling with zero wait times.' }
+    ];
+  } else if (fullTopic.includes('restaurant') || fullTopic.includes('food') || fullTopic.includes('pizza')) {
+    bentoItems = [
+      { title: 'Artisanal Fresh Ingredients', desc: 'Sourced daily from certified local organic farms.' },
+      { title: 'Express Warm Delivery', desc: 'Insulated thermal transit ensuring oven-fresh arrival.' },
+      { title: 'Chef Special Recipes', desc: 'Crafted with passion using secret family spice blends.' }
+    ];
+  }
+
+  // Construct contact details subtitle
+  const contactParts = [
+    data.address && `📍 ${data.address}`,
+    data.phone && `📞 ${data.phone}`,
+    data.whatsApp && `💬 WhatsApp: ${data.whatsApp}`,
+    data.contactEmail && `✉️ ${data.contactEmail}`
+  ].filter(Boolean);
+
+  const contactSubtitle = contactParts.length > 0
+    ? contactParts.join(' • ')
+    : (data.tagline || `Get in touch with ${data.businessName || 'our team'} today.`);
+
+  const footerContactDetails = [data.address, data.phone, data.contactEmail].filter(Boolean).join(' | ');
 
   return [
     {
@@ -91,7 +131,7 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       name: 'Synthesized Hero',
       data: {
         title: data.tagline || `Welcome to ${data.businessName || 'Our Business'}`,
-        subtitle: `Curated meticulously for a ${data.vibe} look & feel, targeting ${data.ageRange} demographics in ${data.audienceLocation}.`,
+        subtitle: `Curated meticulously for a ${data.vibe || 'Modern'} look & feel, serving clients in ${data.audienceLocation || 'your area'}.`,
         buttonText1: 'Get Started Today',
         buttonText2: 'Explore Services',
         placeholderImage: heroImage
@@ -113,7 +153,7 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       name: 'Value Proposition Bento',
       data: {
         title: `Supercharged ${data.businessName || 'Brand'} Experience`,
-        subtitle: data.tagline || `A comprehensive outline of why our custom-synthesized workflow outperforms standard frameworks.`,
+        subtitle: data.tagline || `A comprehensive outline of why our custom services outperform standard options.`,
         items: bentoItems
       },
       styles: {
@@ -133,7 +173,7 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       name: 'Onboard Capture Form',
       data: {
         title: `Connect with ${data.businessName || 'Us'}`,
-        subtitle: data.address ? `Visit us at ${data.address} or reach out via ${data.contactEmail || data.phone || 'email'}.` : `Drop your contact details below to get started.`,
+        subtitle: contactSubtitle,
         buttonText1: 'Subscribe / Connect',
         formPlaceholder: data.contactEmail || 'enter your email address'
       },
@@ -153,7 +193,7 @@ function generateBlocksForProject(data: OnboardingState): Block[] {
       type: 'footer',
       name: 'Simple Brand Footer',
       data: {
-        copyright: `© 2026 ${data.businessName || 'Brand'}. All rights reserved.`,
+        copyright: `© 2026 ${data.businessName || 'Brand'}. ${footerContactDetails ? footerContactDetails + '.' : 'All rights reserved.'}`,
         logo: data.logoUrl ? data.logoUrl : `⚡ ${data.businessName || 'Brand'}`
       },
       styles: {
@@ -619,7 +659,24 @@ export default function App() {
 
       <AnimatePresence mode="wait">
         
-        {currentPath === '/builder' ? (
+        {currentPath.startsWith('/preview') ? (
+          <motion.div
+            key="preview"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full h-full"
+          >
+            <PreviewView 
+              project={currentProject || (projects.length > 0 ? projects[0] : null)}
+              onBackToEditor={() => {
+                window.history.pushState({}, '', '/builder');
+                window.dispatchEvent(new Event('popstate'));
+              }}
+            />
+          </motion.div>
+        ) : currentPath === '/builder' ? (
           <motion.div
             key="builder"
             initial={{ opacity: 0 }}

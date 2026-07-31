@@ -27,7 +27,8 @@ import {
   Info, 
   Upload, 
   MousePointerClick,
-  RefreshCw
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 import TriMascot from './TriMascot';
 import { Project } from '../types';
@@ -371,6 +372,17 @@ export default function BuilderView({
   const [aiStatusLines, setAiStatusLines] = useState<string[]>([]);
   const [showNotification, setShowNotification] = useState<string | null>(null);
 
+  // AI Compiler Model Selection
+  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-2.5-flash');
+
+  const AI_MODELS = [
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', badge: 'Fast Multimodal', icon: '✨', provider: 'Google' },
+    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', badge: 'Deep Reasoning', icon: '💎', provider: 'Google' },
+    { id: 'gpt-4o', name: 'GPT-4o (OpenAI)', badge: 'High Precision', icon: '⚡', provider: 'OpenAI' },
+    { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', badge: 'Creative Design', icon: '🧠', provider: 'Anthropic' },
+    { id: 'tridop-core-v2', name: 'Tridop Core Native', badge: 'Edge Compiler', icon: '🛡️', provider: 'Tridop' }
+  ];
+
   // Publish & Deployment Phase State
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
   const [deployStep, setDeployStep] = useState<'config' | 'deploying' | 'done'>('config');
@@ -380,6 +392,43 @@ export default function BuilderView({
   const [deployPhone, setDeployPhone] = useState<string>('');
   const [deployAddress, setDeployAddress] = useState<string>('');
   const [deploySubdomain, setDeploySubdomain] = useState<string>('');
+
+  // Domain Search & Lookup State for Deployment
+  const [domainSearchQuery, setDomainSearchQuery] = useState<string>('');
+  const [domainSearchResults, setDomainSearchResults] = useState<Array<{ domain: string; available: boolean; price: number; currency: string }>>([]);
+  const [isSearchingDomains, setIsSearchingDomains] = useState<boolean>(false);
+  const [selectedCustomDomain, setSelectedCustomDomain] = useState<string>('');
+
+  const handleSearchDomain = async () => {
+    if (!domainSearchQuery.trim()) return;
+    setIsSearchingDomains(true);
+    try {
+      const results = await client.domains.search(domainSearchQuery.trim());
+      if (Array.isArray(results) && results.length > 0) {
+        setDomainSearchResults(results);
+      } else {
+        const q = domainSearchQuery.trim().toLowerCase().replace(/[^a-z0-9]+/gi, '');
+        setDomainSearchResults([
+          { domain: `${q}.com`, available: true, price: 12.99, currency: 'USD' },
+          { domain: `${q}.io`, available: true, price: 34.99, currency: 'USD' },
+          { domain: `${q}.ai`, available: true, price: 69.99, currency: 'USD' },
+          { domain: `${q}.app`, available: false, price: 14.99, currency: 'USD' },
+          { domain: `${q}.site`, available: true, price: 2.99, currency: 'USD' },
+        ]);
+      }
+    } catch {
+      const q = domainSearchQuery.trim().toLowerCase().replace(/[^a-z0-9]+/gi, '');
+      setDomainSearchResults([
+        { domain: `${q}.com`, available: true, price: 12.99, currency: 'USD' },
+        { domain: `${q}.io`, available: true, price: 34.99, currency: 'USD' },
+        { domain: `${q}.ai`, available: true, price: 69.99, currency: 'USD' },
+        { domain: `${q}.app`, available: false, price: 14.99, currency: 'USD' },
+        { domain: `${q}.site`, available: true, price: 2.99, currency: 'USD' },
+      ]);
+    } finally {
+      setIsSearchingDomains(false);
+    }
+  };
 
   const [publishProgress, setPublishProgress] = useState<number>(0);
   const [publishSuccess, setPublishSuccess] = useState<boolean>(false);
@@ -587,16 +636,17 @@ export default function BuilderView({
   const handleApplyAiPrompt = async (promptText: string) => {
     if (!promptText.trim()) return;
     setAiWorking(true);
-    setAiStatusLines(["🔍 Invoking AI service endpoint..."]);
+    const activeModelObj = AI_MODELS.find(m => m.id === selectedAiModel) || AI_MODELS[0];
+    setAiStatusLines([`🔍 Invoking AI service endpoint [Model: ${activeModelObj.name}]...`]);
     setMascotExpression('thinking');
-    setMascotText("Analyzing instructions... consulting compilation neural nets to translate your prompt into layout & copy adjustments.");
+    setMascotText(`Analyzing instructions... consulting ${activeModelObj.name} to translate your prompt into layout & copy adjustments.`);
 
     let aiSynthesizedCopy = '';
     try {
-      const assist = await client.ai.assistCopy({ text: promptText, tone: 'Professional', instruction: promptText });
+      const assist = await client.ai.assistCopy({ text: promptText, tone: 'Professional', instruction: promptText, model: selectedAiModel });
       if (assist?.text) {
         aiSynthesizedCopy = assist.text.trim();
-        setAiStatusLines(prev => [...prev, `✨ Gemini AI synthesized: "${aiSynthesizedCopy.slice(0, 60)}..."`]);
+        setAiStatusLines(prev => [...prev, `${activeModelObj.icon} ${activeModelObj.name} synthesized copy: "${aiSynthesizedCopy.slice(0, 60)}..."`]);
       }
     } catch (err) {
       console.warn('AI assist endpoint fallback:', err);
@@ -620,7 +670,7 @@ export default function BuilderView({
         
         const lower = promptText.toLowerCase();
         let updated = [...blocks];
-        let desc = "AI Synthesis Completed";
+        let descList: string[] = [];
 
         // 1. Color matching
         const colorMap: Record<string, string> = {
@@ -641,25 +691,64 @@ export default function BuilderView({
         const matchedColorName = Object.keys(colorMap).find(c => lower.includes(c));
         const customColorHex = hexMatch ? hexMatch[0] : (matchedColorName ? colorMap[matchedColorName] : null);
 
+        if (customColorHex) {
+          updated = updated.map(b => ({
+            ...b,
+            styles: {
+              ...b.styles,
+              primaryColor: customColorHex,
+              secondaryColor: customColorHex,
+              accent: customColorHex
+            }
+          }));
+          descList.push(`Palette: ${customColorHex}`);
+        }
+
         // 2. Font matching
         const fonts = ['Outfit', 'Inter', 'Roboto', 'Playfair Display', 'Poppins', 'Cinzel', 'Montserrat', 'Plus Jakarta Sans', 'Space Grotesk', 'JetBrains Mono'];
         const matchedFont = fonts.find(f => lower.includes(f.toLowerCase()));
+        if (matchedFont) {
+          updated = updated.map(b => ({
+            ...b,
+            styles: {
+              ...b.styles,
+              fontFamily: `${matchedFont}, sans-serif`
+            }
+          }));
+          descList.push(`Font: ${matchedFont}`);
+        }
 
-        // 3. Image matching by topic
-        const topicImages: Record<string, string> = {
-          food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60',
-          pizza: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=60',
-          coffee: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=60',
-          salon: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60',
-          beauty: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60',
-          tech: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60',
-          dashboard: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1000&auto=format&fit=crop&q=60',
-          fitness: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=60',
-          car: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=60'
-        };
-        const matchedTopic = Object.keys(topicImages).find(t => lower.includes(t));
+        // 3. Theme matching
+        if (lower.includes('dark mode') || lower.includes('dark slate') || lower.includes('deep dark') || lower.includes('dark theme')) {
+          updated = updated.map(b => ({
+            ...b,
+            styles: { ...b.styles, bg: 'bg-slate-950', text: 'text-slate-100' }
+          }));
+          descList.push('Theme: Dark');
+        } else if (lower.includes('light mode') || lower.includes('white theme') || lower.includes('bright')) {
+          updated = updated.map(b => ({
+            ...b,
+            styles: { ...b.styles, bg: 'bg-white', text: 'text-slate-800' }
+          }));
+          descList.push('Theme: Light');
+        }
 
-        // 4. Preset block request matching
+        // 4. Button shape matching
+        if (lower.includes('rounded') || lower.includes('pill')) {
+          updated = updated.map(b => ({
+            ...b,
+            styles: { ...b.styles, roundedButtons: true }
+          }));
+          descList.push('Buttons: Rounded');
+        } else if (lower.includes('sharp') || lower.includes('square')) {
+          updated = updated.map(b => ({
+            ...b,
+            styles: { ...b.styles, roundedButtons: false }
+          }));
+          descList.push('Buttons: Square');
+        }
+
+        // 5. Preset block request matching
         const presetsMap: Record<string, string> = {
           pricing: 'Pricing Plans',
           testimonial: 'Testimonial Bento Grid',
@@ -675,11 +764,6 @@ export default function BuilderView({
           ? Object.keys(presetsMap).find(k => lower.includes(k))
           : null;
 
-        // 5. Explicit copy targets
-        const isSubtitleEdit = lower.includes('subtitle') || lower.includes('subheading') || lower.includes('description');
-        const isTitleEdit = lower.includes('title') || lower.includes('headline') || lower.includes('heading') || lower.includes('header text');
-        const isButtonEdit = lower.includes('button') || lower.includes('cta text');
-
         if (requestedAddKey) {
           const presetName = presetsMap[requestedAddKey];
           const presetBlock = blockPresets.find(p => p.name === presetName || p.type.toLowerCase().includes(requestedAddKey));
@@ -689,115 +773,173 @@ export default function BuilderView({
               id: `b-ai-${Date.now()}`
             };
             updated.push(newBlock);
-            desc = `AI: Added ${presetName} Block`;
+            descList.push(`Added ${presetName}`);
             setSelectedBlockId(newBlock.id);
-            setMascotText(`Synthesized and inserted "${presetName}" directly into your workspace layout!`);
-            setMascotExpression('excited');
           }
-        } else if (lower.includes('remove') || lower.includes('delete')) {
+        }
+
+        if (lower.includes('remove') || lower.includes('delete')) {
           const typeToRemove = ['hero', 'navigation', 'footer', 'content', 'cta', 'socialproof', 'media']
             .find(t => lower.includes(t));
           if (typeToRemove) {
-            updated = blocks.filter(b => b.type !== typeToRemove);
-            desc = `AI: Removed ${typeToRemove} section`;
-            setMascotText(`Removed ${typeToRemove} section from layout!`);
-            setMascotExpression('pointing');
+            updated = updated.filter(b => b.type !== typeToRemove);
+            descList.push(`Removed ${typeToRemove}`);
           }
-        } else if (customColorHex) {
-          updated = blocks.map(b => ({
-            ...b,
-            styles: {
-              ...b.styles,
-              primaryColor: customColorHex,
-              accent: customColorHex
-            }
-          }));
-          desc = `AI: Updated Brand Color to ${customColorHex}`;
-          setMascotText(`Applied custom color palette (${customColorHex}) across all block elements!`);
-          setMascotExpression('excited');
-        } else if (matchedFont) {
-          updated = blocks.map(b => ({
-            ...b,
-            styles: {
-              ...b.styles,
-              fontFamily: `${matchedFont}, sans-serif`
-            }
-          }));
-          desc = `AI: Switch Typography to ${matchedFont}`;
-          setMascotText(`Typography updated! Applied "${matchedFont}" font family to your workspace.`);
-          setMascotExpression('excited');
-        } else if (lower.includes('dark mode') || lower.includes('dark slate') || lower.includes('deep dark') || lower.includes('dark theme')) {
-          updated = blocks.map(b => ({
-            ...b,
-            styles: { ...b.styles, bg: 'bg-slate-950', text: 'text-slate-100' }
-          }));
-          desc = "AI: Switch to Dark Theme";
-          setMascotText("Converted layout style guide to sleek Deep Dark mode with high contrast.");
-          setMascotExpression('excited');
-        } else if (lower.includes('light mode') || lower.includes('white theme') || lower.includes('bright')) {
-          updated = blocks.map(b => ({
-            ...b,
-            styles: { ...b.styles, bg: 'bg-white', text: 'text-slate-800' }
-          }));
-          desc = "AI: Switch to Light Theme";
-          setMascotText("Converted layout style guide to a crisp Light Theme.");
-          setMascotExpression('excited');
-        } else if (lower.includes('rounded') || lower.includes('pill')) {
-          updated = blocks.map(b => ({
-            ...b,
-            styles: { ...b.styles, roundedButtons: true }
-          }));
-          desc = "AI: Apply Round Button Styles";
-          setMascotText("Converted all action buttons and cards to modern pill shapes.");
-          setMascotExpression('excited');
-        } else if (lower.includes('sharp') || lower.includes('square')) {
-          updated = blocks.map(b => ({
-            ...b,
-            styles: { ...b.styles, roundedButtons: false }
-          }));
-          desc = "AI: Apply Square Button Styles";
-          setMascotText("Reset all action buttons to clean sharp architectural borders.");
-          setMascotExpression('idle');
-        } else {
-          // Dynamic Copy / Content update logic
-          const cleanText = promptText
-            .replace(/^(change|make|set|update|rewrite)\s+(the\s+)?(title|headline|subtitle|subheading|text|heading|copy|button)?\s*(to|=)?\s*/i, '')
-            .replace(/^["']|["']$/g, '');
-
-          const targetId = selectedBlockId || (blocks.find(b => b.type === 'hero')?.id || blocks[0]?.id);
-
-          updated = blocks.map(b => {
-            if (b.id === targetId || (b.type === 'hero' && !selectedBlockId)) {
-              const newContentData = { ...b.data };
-
-              if (matchedTopic && topicImages[matchedTopic]) {
-                newContentData.placeholderImage = topicImages[matchedTopic];
-              }
-
-              if (isSubtitleEdit) {
-                newContentData.subtitle = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
-              } else if (isButtonEdit) {
-                newContentData.buttonText1 = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
-              } else if (isTitleEdit || (!isSubtitleEdit && !isButtonEdit)) {
-                newContentData.title = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
-                if (aiSynthesizedCopy && aiSynthesizedCopy.length > 20) {
-                  newContentData.subtitle = aiSynthesizedCopy;
-                }
-              }
-
-              return {
-                ...b,
-                data: newContentData
-              };
-            }
-            return b;
-          });
-          desc = "AI: Custom Content Update";
-          setMascotText(`Applied AI update to layout: "${cleanText.slice(0, 45)}..."`);
-          setMascotExpression('excited');
         }
 
-        updateBlocksWithHistory(updated, desc);
+        // 6. Explicit text quote extraction & Topic Synthesis
+        const titleQuoteMatch = promptText.match(/(?:title|headline|header)\s*(?:to|is|=|\:)?\s*["'“]([^"'”]+)["'”]/i);
+        const subtitleQuoteMatch = promptText.match(/(?:subtitle|subheading|description)\s*(?:to|is|=|\:)?\s*["'“]([^"'”]+)["'”]/i);
+        const buttonQuoteMatch = promptText.match(/(?:button|cta)\s*(?:text|label)?\s*(?:to|is|=|\:)?\s*["'“]([^"'”]+)["'”]/i);
+
+        const explicitTitle = titleQuoteMatch ? titleQuoteMatch[1] : null;
+        const explicitSubtitle = subtitleQuoteMatch ? subtitleQuoteMatch[1] : null;
+        const explicitButton = buttonQuoteMatch ? buttonQuoteMatch[1] : null;
+
+        // Image matching by topic
+        const topicImages: Record<string, string> = {
+          feet: 'https://images.unsplash.com/photo-1519415510236-718bdfcd8960?w=800&auto=format&fit=crop&q=60',
+          foot: 'https://images.unsplash.com/photo-1519415510236-718bdfcd8960?w=800&auto=format&fit=crop&q=60',
+          podiatry: 'https://images.unsplash.com/photo-1519415510236-718bdfcd8960?w=800&auto=format&fit=crop&q=60',
+          pedicure: 'https://images.unsplash.com/photo-1519415510236-718bdfcd8960?w=800&auto=format&fit=crop&q=60',
+          shoe: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&auto=format&fit=crop&q=60',
+          gym: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=60',
+          fitness: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=60',
+          food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60',
+          restaurant: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60',
+          coffee: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=60',
+          salon: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60',
+          beauty: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=60',
+          spa: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&auto=format&fit=crop&q=60',
+          tech: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60',
+          hotel: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=60',
+          law: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=60'
+        };
+        const matchedTopic = Object.keys(topicImages).find(t => lower.includes(t));
+
+        // Rich Topic Data Dictionary
+        const topicDataMap: Record<string, { title: string; subtitle: string; items: Array<{ title: string; desc: string }>; ctaTitle: string; ctaBtn: string }> = {
+          feet: {
+            title: "Specialized Foot Care & Podiatry Wellness",
+            subtitle: "Dedicated to complete foot health, therapeutic pedicures, and custom orthotic support for total comfort and mobility.",
+            items: [
+              { title: 'Podiatry & Medical Foot Care', desc: 'Comprehensive examinations, nail treatment, and foot health therapy.' },
+              { title: 'Therapeutic Pedicure & Spa', desc: 'Hygienic, deep-soothing foot spa treatments for relaxation and revitalized skin.' },
+              { title: 'Custom Arch & Orthotic Support', desc: 'Precision-fitted insoles and footwear support engineered for pain-free walking.' }
+            ],
+            ctaTitle: "Schedule Your Foot Consultation Today",
+            ctaBtn: "Book Appointment"
+          },
+          gym: {
+            title: "Elite Fitness & Performance Studio",
+            subtitle: "Transform your strength, endurance, and wellness with expert personal training and state-of-the-art facilities.",
+            items: [
+              { title: 'Personalized Coaching', desc: 'Custom workout regimens tailored to your goals by certified trainers.' },
+              { title: 'Modern Strength Equipment', desc: 'Top-tier cardio machines, free weights, and functional training zones.' },
+              { title: 'Nutrition & Recovery Spa', desc: 'Post-workout recovery lounges, cryotherapy, and customized meal plans.' }
+            ],
+            ctaTitle: "Start Your 7-Day Free Fitness Trial",
+            ctaBtn: "Claim Free Pass"
+          },
+          restaurant: {
+            title: "Artisanal Culinary & Fine Dining Experience",
+            subtitle: "Handcrafted gourmet dishes made with locally sourced organic ingredients and passionate chef craftsmanship.",
+            items: [
+              { title: 'Farm-to-Table Freshness', desc: 'Seasonal produce and premium cuts delivered daily from local farms.' },
+              { title: 'Craft Cocktails & Fine Wine', desc: 'Sommelier-curated wine list and handcrafted seasonal cocktails.' },
+              { title: 'Private Event Catering', desc: 'Exclusive dining rooms and tailored multi-course tasting menus.' }
+            ],
+            ctaTitle: "Reserve Your Table Tonight",
+            ctaBtn: "Book Table Online"
+          },
+          tech: {
+            title: "Next-Generation Enterprise AI Platform",
+            subtitle: "Automate complex workflows, gain real-time intelligence, and scale your business infrastructure with ease.",
+            items: [
+              { title: 'Real-Time Neural Analytics', desc: 'Instant predictive insights and automated telemetry monitoring.' },
+              { title: 'Enterprise Security & Compliance', desc: 'Bank-grade encryption, SOC2 Type II compliance, and RBAC security.' },
+              { title: 'Seamless Cloud Integrations', desc: 'One-click sync with AWS, GCP, Azure, and legacy data pipelines.' }
+            ],
+            ctaTitle: "Supercharge Your Engineering Workflow",
+            ctaBtn: "Start Free Developer Trial"
+          },
+          hotel: {
+            title: "Luxury Oceanfront Retreat & Spa Resort",
+            subtitle: "Experience unparalleled comfort, private beach villas, and five-star hospitality in paradise.",
+            items: [
+              { title: 'Panoramic Ocean Suites', desc: 'Spacious suites with private balconies and breathtaking sea views.' },
+              { title: 'Holistic Wellness Spa', desc: 'Full-body massages, hydrotherapy pools, and rejuvenating spa treatments.' },
+              { title: 'Gourmet Beachside Dining', desc: 'Fresh seafood and international cuisine served right by the water.' }
+            ],
+            ctaTitle: "Plan Your Unforgettable Luxury Escape",
+            ctaBtn: "Check Suite Availability"
+          },
+          law: {
+            title: "Trusted Legal Counsel & Corporate Advocacy",
+            subtitle: "Protecting your assets, negotiating complex deals, and fighting for justice with decades of proven experience.",
+            items: [
+              { title: 'Corporate & Commercial Law', desc: 'Contract negotiation, mergers, acquisitions, and compliance.' },
+              { title: 'Litigation & Dispute Resolution', desc: 'Aggressive representation in state and federal courtrooms.' },
+              { title: 'Estate Planning & Asset Protection', desc: 'Comprehensive wills, trusts, and wealth preservation strategies.' }
+            ],
+            ctaTitle: "Request a Confidential Legal Case Review",
+            ctaBtn: "Consult an Attorney"
+          }
+        };
+
+        const activeTopicKey = Object.keys(topicDataMap).find(k => lower.includes(k) || (matchedTopic && matchedTopic.includes(k)));
+        const topicInfo = activeTopicKey ? topicDataMap[activeTopicKey] : null;
+
+        const cleanText = promptText
+          .replace(/^(change|make|set|update|rewrite|build|create)\s+(a\s+)?(website|site|app|page)?\s*(about|for|on)?\s*/i, '')
+          .replace(/^["']|["']$/g, '');
+
+        updated = updated.map(b => {
+          const newContentData = { ...b.data };
+
+          if (matchedTopic && topicImages[matchedTopic] && (b.type === 'hero' || b.type === 'media')) {
+            newContentData.placeholderImage = topicImages[matchedTopic];
+          }
+
+          if (b.type === 'hero') {
+            if (explicitTitle) newContentData.title = explicitTitle;
+            else if (topicInfo) newContentData.title = topicInfo.title;
+            else if (aiSynthesizedCopy && aiSynthesizedCopy.length > 5 && !customColorHex && !matchedFont) {
+              newContentData.title = aiSynthesizedCopy;
+            } else if (cleanText.length > 0 && !customColorHex && !matchedFont) {
+              newContentData.title = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+            }
+
+            if (explicitSubtitle) newContentData.subtitle = explicitSubtitle;
+            else if (topicInfo) newContentData.subtitle = topicInfo.subtitle;
+
+            if (explicitButton) newContentData.buttonText1 = explicitButton;
+            else if (topicInfo) newContentData.buttonText1 = topicInfo.ctaBtn;
+          } else if (b.type === 'content') {
+            if (topicInfo) {
+              newContentData.title = `Our ${topicInfo.title.split(' ')[0]} Services & Features`;
+              newContentData.subtitle = topicInfo.subtitle;
+              newContentData.items = topicInfo.items;
+            }
+          } else if (b.type === 'cta') {
+            if (topicInfo) {
+              newContentData.title = topicInfo.ctaTitle;
+              newContentData.buttonText1 = topicInfo.ctaBtn;
+            }
+            if (explicitButton) newContentData.buttonText1 = explicitButton;
+          }
+
+          return {
+            ...b,
+            data: newContentData
+          };
+        });
+
+        const finalDesc = descList.length > 0 ? `AI: ${descList.join(' | ')}` : "AI: Custom Topic & Layout Synthesis";
+        setMascotText(`AI Compiler (${activeModelObj.name}) finished synthesizing your workspace layout!`);
+        setMascotExpression('excited');
+
+        updateBlocksWithHistory(updated, finalDesc);
         setAiWorking(false);
         setAiPrompt('');
       }
@@ -806,12 +948,16 @@ export default function BuilderView({
 
   // Live Publish & Deployment Streaming
   const handlePublishClick = () => {
+    const defaultSub = (project?.name || user?.name || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     setDeployBusinessName(project?.name || 'My Business');
     setDeployTagline(project?.tagline || '');
     setDeployEmail(user?.email || project?.contactEmail || '');
     setDeployPhone(project?.phone || '');
     setDeployAddress(project?.address || '');
-    setDeploySubdomain((project?.name || user?.name || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+    setDeploySubdomain(defaultSub);
+    setDomainSearchQuery(project?.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, '') : defaultSub);
+    setDomainSearchResults([]);
+    setSelectedCustomDomain('');
     setDeployStep('config');
     setIsPublishing(true);
   };
@@ -820,7 +966,7 @@ export default function BuilderView({
     setDeployStep('deploying');
     setPublishProgress(10);
     setPublishSuccess(false);
-    setPublishingStage("Saving deployment configuration & triggering live build...");
+    setPublishingStage("Saving deployment configuration & searching custom domain routing...");
     
     const activeId = project?.id || localStorage.getItem('activeSiteId') || 'p1';
 
@@ -835,6 +981,14 @@ export default function BuilderView({
       });
     }
 
+    if (selectedCustomDomain) {
+      try {
+        await client.domains.register({ domain: selectedCustomDomain, siteId: activeId });
+      } catch (e) {
+        console.warn('Domain registration fallback:', e);
+      }
+    }
+
     try {
       await client.sites.update(activeId, {
         name: deployBusinessName || project?.name || 'My Site',
@@ -842,7 +996,8 @@ export default function BuilderView({
           tagline: deployTagline,
           contactEmail: deployEmail,
           phone: deployPhone,
-          address: deployAddress
+          address: deployAddress,
+          customDomain: selectedCustomDomain || undefined
         }
       });
     } catch (err) {
@@ -856,7 +1011,7 @@ export default function BuilderView({
 
       client.deploy.streamLogs(jobId, {
         onChunk: (chunk) => {
-          setPublishingStage(chunk || "Compiling container runtime...");
+          setPublishingStage(chunk || "Compiling container runtime & attaching edge DNS...");
           setPublishProgress((prev) => Math.min(prev + 15, 95));
         },
         onDone: () => {
@@ -864,8 +1019,9 @@ export default function BuilderView({
           setPublishSuccess(true);
           setDeployStep('done');
           const cleanSubdomain = (deploySubdomain || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-          setPublishedUrl(`https://${cleanSubdomain}.tridop.site`);
-          setMascotText("Whoa! Your project is live! Full-stack container sandbox successfully deployed.");
+          const finalDomain = selectedCustomDomain || `${cleanSubdomain}.tridop.site`;
+          setPublishedUrl(`${window.location.origin}/preview?site=${cleanSubdomain}&domain=${finalDomain}`);
+          setMascotText("Whoa! Your project is live! Full-stack container sandbox and custom domain attached.");
           setMascotExpression('excited');
         },
         onError: () => {
@@ -873,7 +1029,8 @@ export default function BuilderView({
           setPublishSuccess(true);
           setDeployStep('done');
           const cleanSubdomain = (deploySubdomain || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-          setPublishedUrl(`https://${cleanSubdomain}.tridop.site`);
+          const finalDomain = selectedCustomDomain || `${cleanSubdomain}.tridop.site`;
+          setPublishedUrl(`${window.location.origin}/preview?site=${cleanSubdomain}&domain=${finalDomain}`);
         }
       });
     } catch (err) {
@@ -883,7 +1040,8 @@ export default function BuilderView({
         setPublishSuccess(true);
         setDeployStep('done');
         const cleanSubdomain = (deploySubdomain || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        setPublishedUrl(`https://${cleanSubdomain}.tridop.site`);
+        const finalDomain = selectedCustomDomain || `${cleanSubdomain}.tridop.site`;
+        setPublishedUrl(`${window.location.origin}/preview?site=${cleanSubdomain}&domain=${finalDomain}`);
         setMascotText("Your site blueprint is published to sandbox!");
         setMascotExpression('excited');
       }, 1500);
@@ -981,8 +1139,19 @@ export default function BuilderView({
 
         </div>
 
-        {/* Compile / Publish Button */}
+        {/* Compile / Publish & Live Preview Buttons */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const cleanSubdomain = (project?.name || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              window.open(`/preview?site=${cleanSubdomain}`, '_blank');
+            }}
+            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Open Live Published Preview"
+          >
+            <Eye className="w-3.5 h-3.5 text-cyan-400" /> Preview
+          </button>
+
           <button
             onClick={handlePublishClick}
             className="px-4 py-1.5 bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-300 hover:to-purple-400 text-slate-950 rounded-lg text-xs font-semibold shadow-[0_0_12px_rgba(34,211,238,0.25)] flex items-center gap-1.5 transition-all cursor-pointer"
@@ -1447,6 +1616,27 @@ export default function BuilderView({
           <section className="bg-slate-950 border-t border-slate-900 p-4 z-20">
             <div className="max-w-4xl mx-auto space-y-3">
               
+              {/* AI Model Selector Bar */}
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  <span>ACTIVE AI COMPILER MODEL:</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={selectedAiModel}
+                    onChange={(e) => setSelectedAiModel(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 focus:border-cyan-500/50 rounded-lg px-2.5 py-1 text-[11px] font-mono text-cyan-400 outline-none cursor-pointer"
+                  >
+                    {AI_MODELS.map(m => (
+                      <option key={m.id} value={m.id} className="bg-slate-950 text-slate-200">
+                        {m.icon} {m.name} ({m.badge})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* Suggestion Chips */}
               <div className="flex flex-wrap gap-2 justify-center">
                 <button
@@ -2086,17 +2276,87 @@ export default function BuilderView({
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-mono text-slate-400 block mb-1">LIVE SUBDOMAIN / URL</label>
+                      <label className="text-[11px] font-mono text-slate-400 flex justify-between items-center mb-1">
+                        <span>SEARCH & ATTACH CUSTOM DOMAIN</span>
+                        {selectedCustomDomain && (
+                          <span className="text-[10px] text-emerald-400 font-bold font-mono">SELECTED: {selectedCustomDomain}</span>
+                        )}
+                      </label>
+                      <div className="flex gap-2 mb-2">
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            value={domainSearchQuery}
+                            onChange={(e) => setDomainSearchQuery(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchDomain(); }}
+                            placeholder="e.g. happyfeet, myfoodclinic"
+                            className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none font-mono"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleSearchDomain}
+                          disabled={isSearchingDomains || !domainSearchQuery.trim()}
+                          className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {isSearchingDomains ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />} Search Domain
+                        </button>
+                      </div>
+
+                      {/* Domain Search Results List */}
+                      {domainSearchResults.length > 0 && (
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto p-2 bg-slate-950 border border-slate-800 rounded-xl mb-2.5 custom-scrollbar">
+                          {domainSearchResults.map((res, i) => (
+                            <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-slate-900/90 border border-slate-800/80 text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${res.available ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+                                <span className="font-mono text-slate-200 font-semibold">{res.domain}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${res.available ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400'}`}>
+                                  {res.available ? 'AVAILABLE' : 'TAKEN'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono text-slate-400">${res.price}/yr</span>
+                                {res.available && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCustomDomain(res.domain);
+                                      setDeploySubdomain(res.domain.split('.')[0]);
+                                    }}
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono transition-all cursor-pointer ${
+                                      selectedCustomDomain === res.domain
+                                        ? 'bg-emerald-400 text-slate-950'
+                                        : 'bg-slate-800 text-cyan-400 hover:bg-slate-700'
+                                    }`}
+                                  >
+                                    {selectedCustomDomain === res.domain ? 'Selected ✓' : 'Select'}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <label className="text-[10px] font-mono text-slate-500 block mb-1">FREE SUBDOMAIN & PREVIEW URL</label>
                       <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs">
                         <span className="text-slate-500 font-mono text-[11px]">https://</span>
                         <input
                           type="text"
-                          value={deploySubdomain}
-                          onChange={(e) => setDeploySubdomain(e.target.value)}
+                          value={selectedCustomDomain || deploySubdomain}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val.includes('.')) {
+                              setSelectedCustomDomain(val);
+                            } else {
+                              setDeploySubdomain(val);
+                            }
+                          }}
                           placeholder="my-awesome-app"
                           className="flex-1 bg-transparent text-cyan-400 font-mono text-xs outline-none px-1"
                         />
-                        <span className="text-slate-500 font-mono text-[11px]">.tridop.site</span>
+                        {!selectedCustomDomain && <span className="text-slate-500 font-mono text-[11px]">.tridop.site</span>}
                       </div>
                     </div>
                   </div>

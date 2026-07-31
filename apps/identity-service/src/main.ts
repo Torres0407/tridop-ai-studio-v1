@@ -24,8 +24,11 @@ async function bootstrap() {
         host: parsed.hostname || 'redis',
         port: Number(parsed.port) || 6379,
         family: 4,
-        retryAttempts: 10,
-        retryDelay: 3000,
+        connectTimeout: 10000,
+        retryStrategy: (times: number) => {
+          if (times > 5) return null;
+          return 2000;
+        },
       };
 
       if (parsed.password) {

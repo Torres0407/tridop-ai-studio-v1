@@ -10,8 +10,29 @@ permissions:
   packages: write
 
 jobs:
+  verify:
+    name: 🛡️ Verify All Microservices Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit
+
+      - name: Build all microservices
+        run: npx nx run-many --target=build --all --parallel=3
+
   build-and-push:
-    name: Build & Push Docker Image
+    name: 🚀 Build & Push Docker Image
+    needs: verify
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -64,8 +85,8 @@ jobs:
             ghcr.io/${{ steps.repo.outputs.owner }}/tridopai-${{ matrix.service }}:latest
 
       - name: Trigger Render Deployment (Optional)
+        shell: bash
         run: |
-          # Transform matrix service name to uppercase with underscores (e.g., SITES_SERVICE_RENDER_HOOK)
           HOOK_VAR_NAME="$(echo "${{ matrix.service }}" | tr '[:lower:]-' '[:upper:]_')_RENDER_HOOK"
           RENDER_HOOK_URL="${!HOOK_VAR_NAME}"
           if [ -n "$RENDER_HOOK_URL" ]; then
@@ -74,33 +95,3 @@ jobs:
           else
             echo "No Render Deploy Hook configured for $HOOK_VAR_NAME, skipping automated webhook trigger."
           fi
-
-      - name: Deploy service
-        run: |
-          echo "Deploying ${{ matrix.service }}:${{ github.sha }}"
-          # e.g.: flyctl deploy --image ghcr.io/... --app tridopai-${{ matrix.service }}
-
-      - name: Health check
-        run: |
-          SERVICE_URL=${{ secrets[format('{0}_HEALTH_URL', matrix.service)] }}
-          if [ -z "$SERVICE_URL" ]; then
-            echo "No health URL configured for ${{ matrix.service }}, skipping."
-            exit 0
-          fi
-          for i in {1..12}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$SERVICE_URL/health")
-            if [ "$STATUS" = "200" ]; then
-              echo "Health check passed"
-              exit 0
-            fi
-            echo "Attempt $i failed (status $STATUS), retrying in 10s..."
-            sleep 10
-          done
-          echo "Health check failed after 12 attempts"
-          exit 1
-
-      - name: Rollback on failure
-        if: failure()
-        run: |
-          echo "Rolling back ${{ matrix.service }} to previous image..."
-          # e.g.: flyctl deploy --image ghcr.io/...:<previous-sha> --app tridopai-${{ matrix.service }}
