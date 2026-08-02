@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY apps/identity-service ./apps/identity-service
 RUN NX_DAEMON=false npx nx build identity-service --prod
 
 # ─── Runtime image ────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:25-alpine AS runtime
 
 WORKDIR /app
 
